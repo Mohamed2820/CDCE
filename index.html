@@ -1,0 +1,170 @@
+<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CDCE</title><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#2a6df4">
+<link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-192.png">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<style>
+:root{--bg:#f4f6fb;--c:#fff;--t:#14213d;--m:#6b7390;--a:#2a6df4;--b:#e3e7f1;--g:#1fa971;--r:#e5484d}
+@media(prefers-color-scheme:dark){:root{--bg:#0e1424;--c:#182038;--t:#eef1fa;--m:#9aa3c0;--b:#27304d;--a:#5b8cff}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0}
+body{font-family:Tajawal,system-ui,sans-serif;background:var(--bg);color:var(--t);display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px)}
+#v{flex:1;overflow:auto;padding:14px 14px 8px}
+h2{margin:0 0 10px;font-size:20px}h3{margin:14px 0 6px;font-size:16px}
+.card{background:var(--c);border:1px solid var(--b);border-radius:16px;padding:14px;margin-bottom:10px}
+.row{display:flex;align-items:center;gap:10px}
+.btn{background:var(--a);color:#fff;border:0;border-radius:12px;padding:10px 14px;font:inherit;font-weight:700}
+.btn.o{background:transparent;color:var(--a);border:1px solid var(--a)}.btn.g{background:var(--g)}.btn.r{background:var(--r)}
+.av{width:46px;height:46px;border-radius:50%;background:var(--a);color:#fff;display:grid;place-items:center;font-weight:800;flex:none;object-fit:cover}
+.av.big{width:92px;height:92px;font-size:34px;margin:auto}
+.tag{font-size:12px;background:var(--b);border-radius:20px;padding:3px 10px;color:var(--m);display:inline-block;margin:2px}
+.m{color:var(--m);font-size:13px}.grow{flex:1}
+input,select,textarea{width:100%;padding:12px;border-radius:12px;border:1px solid var(--b);background:var(--c);color:var(--t);font:inherit;margin:5px 0}
+nav{display:flex;overflow-x:auto;background:var(--c);border-top:1px solid var(--b);padding-bottom:env(safe-area-inset-bottom,0px)}
+nav button{flex:none;min-width:64px;background:none;border:0;padding:8px 4px;font:inherit;font-size:11px;color:var(--m)}
+nav button b{display:block;font-size:20px;font-weight:400}nav button.on{color:var(--a);font-weight:700}
+.logo{width:90px;height:90px;border-radius:24px;background:var(--a);color:#fff;display:grid;place-items:center;font-size:24px;font-weight:800;margin:auto}
+.qr{max-width:180px;width:100%;border:2px dashed var(--b);border-radius:12px;display:grid;place-items:center;color:var(--m);font-size:12px;margin:auto;min-height:120px}
+.memo{background:var(--bg);border-radius:12px;padding:10px;margin-top:8px}
+.msgs{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
+.bub{max-width:82%;padding:8px 12px;border-radius:14px;background:var(--c);border:1px solid var(--b);align-self:flex-start;white-space:pre-wrap}
+.bub.me{align-self:flex-end;background:var(--a);color:#fff;border:0}.bub small{display:block;font-size:11px;opacity:.7}
+.send{display:flex;gap:6px;position:sticky;bottom:0;background:var(--bg);padding:6px 0}.send input{margin:0}
+.sub{display:flex;gap:8px;margin-bottom:10px}.sub .btn{flex:1}
+#ld{display:none;position:fixed;top:0;left:0;right:0;height:4px;z-index:20;background:linear-gradient(90deg,transparent,var(--a),transparent);background-size:50% 100%;background-repeat:no-repeat;animation:ld 1s linear infinite}
+@keyframes ld{from{background-position:-50% 0}to{background-position:150% 0}}
+#tt{display:none;position:fixed;bottom:84px;left:12px;right:12px;background:#222;color:#fff;padding:12px;border-radius:12px;text-align:center;z-index:30}
+#ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:25;place-items:center}
+</style></head><body><div id="v"><div class="logo" style="margin-top:30vh">CDCE</div></div><nav id="nav" hidden></nav><div id="ld"></div><div id="tt"></div><div id="ov"></div>
+<script>
+const sb=supabase.createClient('https://aagjiudjznizrlyeewiq.supabase.co','sb_publishable_u7_rlr8_3vWbKBwSg3G4cw_XElO6uQM');
+const RN={member:'ممبر',board:'بورد',assistant_head:'مساعد هيد',head:'هيد',leader:'ليدر'},RKS=Object.keys(RN),n=x=>RKS.indexOf(x.rank);
+const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const lg=k=>{try{return localStorage.getItem(k)}catch(e){}},ls=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
+let U=null,ME=null,P=[],DEP=[],ST={},V={t:'home'},ed=0,mode='in',MS=[],PL=[],VT=[],sub='chat',CODES=[],RES=[],DMS=[],ps=0;
+const EM=[[/Invalid login/i,'رقم التليفون أو كلمة السر غلط'],[/already registered/i,'الرقم ده مسجّل قبل كده'],[/leader only/i,'العملية دي للليدر بس'],[/points not allowed/i,'مش مسموح تغيّر نقاط الشخص ده'],[/poll closed/i,'التصويت خلص'],[/no edits left/i,'خلصت تعديلاتك الـ3'],[/target cannot/i,'مينفعش تصوّت على نفسك'],[/Failed to fetch|NetworkError|network/i,'مفيش اتصال بالإنترنت'],[/weak password|at least 6|should be at least/i,'كلمة السر لازم 6 حروف على الأقل'],[/Database error saving/i,'الكود مش صالح أو اتستخدم'],[/row-level|permission|not allowed|violates/i,'مش مسموح لك بالعملية دي'],[/locked/i,'حاولت كتير غلط. استنى 15 دقيقة'],[/duplicate|unique/i,'موجود قبل كده']];
+const ar=e=>{const m=(e&&e.message)||String(e),h=EM.find(x=>x[0].test(m));return h?h[1]:'حصلت مشكلة، حاول تاني'};
+let tt;function toast(m){const t=$('#tt');t.textContent=m;t.style.display='block';clearTimeout(tt);tt=setTimeout(()=>t.style.display='none',3500)}
+async function run(f){$('#ld').style.display='block';try{return await f()}catch(e){toast(ar(e))}finally{$('#ld').style.display='none'}}
+const q=async p=>{const r=await p;if(r.error)throw r.error;return r.data};
+const go=v=>{V=v;draw()},dn=id=>(DEP.find(d=>d.id==id)||{}).name||'',nameBy=id=>(P.find(x=>x.id==id)||{}).full_name||'النظام';
+async function boot(){await run(async()=>{const{data:{session}}=await sb.auth.getSession();if(!session){U=null;return login()}U=session.user;if(!await claim()){await sb.auth.signOut();U=null;toast('الحساب مفتوح على جهاز تاني. اعمل تسجيل خروج منه أو استنى دقيقتين.');return login()}await load();subRt();draw();if(REC){const c=REC;REC=null;showRec(c)}else if(ME&&lg('cdce_seen')!='1')guide(0)})}
+async function load(){const[d,p,s]=await Promise.all([q(sb.from('departments').select('*')),q(sb.from('profiles').select('*')),q(sb.from('team_settings').select('*').eq('id',1).single())]);DEP=d||[];P=p||[];ST=s||{};ME=P.find(x=>x.user_id==U.id)}
+const norm=s=>String(s).replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/\D/g,''),mail=ph=>norm(ph)+'@cdce.app';
+function login(){$('#nav').hidden=true;const up=mode=='up',fp=mode=='fp';
+ $('#v').innerHTML=`<div class="logo" style="margin:20px auto">CDCE</div><div class="card"><h2>${up?'حساب جديد':fp?'نسيت كلمة السر':'تسجيل الدخول'}</h2>
+ ${up?'<input id="lk" placeholder="كود الدعوة (من الليدر)"><input id="ln" placeholder="الاسم">':''}${fp?'<input id="lk" placeholder="كود الاسترجاع بتاعك">':''}<input id="lp" type="tel" placeholder="رقم التليفون"><input id="lw" type="password" placeholder="${fp?'كلمة السر الجديدة':'كلمة السر (6 حروف على الأقل)'}">
+ ${up?'<input id="lc" placeholder="الكلية"><input id="ly" placeholder="الفرقة (أو متخرج)"><input id="lo" placeholder="تقدر تقدم إيه للفريق؟">':''}
+ <button class="btn" style="width:100%" onclick="${up?'reg()':fp?'resetRec()':'logIn()'}">${up?'إنشاء الحساب':fp?'تغيير كلمة السر':'دخول'}</button>
+ ${fp?'<p class="m" style="text-align:center" onclick="reqReset()">ضيّعت الكود؟ ابعت طلب للليدر أو الهيد</p>':''}
+ <p class="m" style="text-align:center" onclick="mode='${up||fp?'in':'up'}';login()">${up||fp?'رجوع لتسجيل الدخول':'مفيش حساب؟ أنشئ حساب بكود الدعوة'}</p>
+ ${mode=='in'?'<p class="m" style="text-align:center" onclick="mode=\'fp\';login()">نسيت كلمة السر؟</p>':''}</div>`}
+let REC=null;const SID=(()=>{let x=lg('cdce_sid');if(!x){x=crypto.randomUUID();ls('cdce_sid',x)}return x})();
+const claim=async()=>{const{data,error}=await sb.rpc('claim_session',{sid:SID});return error?true:data===true};
+const genRec=()=>{const a='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';return[...crypto.getRandomValues(new Uint8Array(12))].map(x=>a[x%32]).join('')};
+function showRec(c){const o=$('#ov');o.style.display='grid';o.innerHTML=`<div class="card" style="max-width:420px;width:92%;text-align:center"><h2>🔑 كود الاسترجاع بتاعك</h2><p class="m">اكتبه في مكان آمن. هتحتاجه لو نسيت كلمة السر، ومش هيظهر تاني.</p><div style="font-size:26px;font-weight:800;letter-spacing:3px;margin:12px 0;direction:ltr">${c}</div><button class="btn o" onclick="try{navigator.clipboard.writeText('${c}');toast('اتنسخ')}catch(e){}">نسخ</button> <button class="btn" onclick="$('#ov').style.display='none';if(lg('cdce_seen')!='1')guide(0)">كتبته ✅</button></div>`}
+const logIn=()=>run(async()=>{const{error}=await sb.auth.signInWithPassword({email:mail($('#lp').value),password:$('#lw').value});if(error)throw error;await boot()});
+const reqReset=()=>run(async()=>{const ph=norm($('#lp').value);if(ph.length<8)return toast('اكتب رقم التليفون الأول');await q(sb.rpc('request_reset',{p:ph}));toast('اتبعت الطلب. كلّم الليدر أو الهيد.');mode='in';login()});
+const resetRec=()=>run(async()=>{const ph=norm($('#lp').value),c=$('#lk').value.trim(),pw=$('#lw').value;if(ph.length<8||!c||pw.length<6)return toast('اكتب رقم التليفون وكود الاسترجاع وكلمة سر جديدة (6+)');
+ if(!await q(sb.rpc('reset_with_recovery',{p:ph,c,newpw:pw})))return toast('الرقم أو كود الاسترجاع غلط');toast('اتغيرت كلمة السر ✅ سجّل دخول');mode='in';login()});
+const reg=()=>run(async()=>{const name=$('#ln').value.trim(),ph=norm($('#lp').value),pw=$('#lw').value,code=$('#lk').value.trim().toUpperCase();
+ if(!code||!name||ph.length<8||pw.length<6)return toast('كمّل البيانات: الكود والاسم وتليفون صحيح وكلمة سر 6 حروف على الأقل');
+ if(!await q(sb.rpc('check_code',{c:code})))return toast('الكود غلط أو اتستخدم قبل كده');
+ const{data,error}=await sb.auth.signUp({email:mail(ph),password:pw,options:{data:{full_name:name,phone:ph,code,college:$('#lc').value,year:$('#ly').value,offer:$('#lo').value}}});if(error)throw error;
+ if(!data.session){const r=await sb.auth.signInWithPassword({email:mail(ph),password:pw});if(r.error)throw r.error}
+ const rec=genRec();try{await q(sb.rpc('set_recovery',{c:rec}));REC=rec}catch(e){}await boot()});
+const out=async()=>{try{await sb.rpc('release_session')}catch(e){}await sb.auth.signOut();ME=null;U=null;mode='in';boot()};
+const newRec=()=>run(async()=>{const c=genRec();await q(sb.rpc('set_recovery',{c}));showRec(c)});
+const delMe=()=>{if(!confirm('هتحذف حسابك نهائياً وتتفك ارتباط كودك. متأكد؟'))return;run(async()=>{await q(sb.rpc('delete_my_account'));try{await sb.auth.signOut()}catch(e){}ME=null;U=null;mode='in';toast('اتحذف الحساب');login()})};
+setInterval(async()=>{if(!U)return;const{data,error}=await sb.rpc('ping_session',{sid:SID});if(!error&&data===false){await sb.auth.signOut();U=null;ME=null;toast('اتفتح الحساب من جهاز تاني');login()}},45000);
+const G=[['👋 أهلاً في CDCE','التطبيق ده بيجمع الفريق كله في مكان واحد: الأقسام والأعضاء والشاتات والتصويتات.'],['🔺 الرتب','ليدر: قائد الفريق وواحد بس.\nهيد: مسؤول قسم.\nمساعد هيد: معاون الهيد.\nبورد: عضو مجلس القسم.\nممبر: عضو في الفريق.\n\nرتبتك بيحددها الليدر وبتظهر في بروفايلك.'],['💬 الشاتات','العام: الفريق كله.\nشات القسم: أعضاء قسمك بس.\nالخاص: بينك وبين شخص من بروفايله.\nرسايل: إعلانات مهمة، بينزلها الليدر والهيدات ومساعدوهم.\nVIP: لمساعد الهيد وفوق، فيه شات وتصويتات.'],['⭐ النقاط والألقاب','الليدر والهيدات بيضيفوا أو يخصموا نقاط للأقل منهم رتبة بس. اللقب بيتحدد بتصويت الهيدات. الليدر مالوش نقاط.'],['🔐 حسابك','بتدخل برقم تليفونك وكلمة السر. أول ما تسجّل هتاخد كود استرجاع، اكتبه في مكان آمن. لو نسيت كلمة السر اضغط "نسيت كلمة السر" واكتب رقمك والكود. والحساب بيفتح على جهاز واحد في نفس الوقت.']];
+function guide(i){const o=$('#ov');if(i>=G.length){o.style.display='none';ls('cdce_seen','1');return}o.style.display='grid';
+ o.innerHTML=`<div class="card" style="max-width:420px;width:92%"><h2>${G[i][0]}</h2><p style="white-space:pre-wrap;line-height:1.9">${G[i][1]}</p><div class="row"><button class="btn o" onclick="guide(99)">تخطي</button><div class="grow"></div><button class="btn" onclick="guide(${i+1})">${i==G.length-1?'ابدأ':'التالي'}</button></div></div>`}
+function draw(){if(!ME){$('#v').innerHTML='<div class="card">حسابك لسه ما اتجهزش. اطلع وادخل تاني.</div><button class="btn r" onclick="out()">خروج</button>';return}
+ const T=[['home','🏠','الرئيسية'],['depts','👥','الأقسام'],['pyr','🔺','الهرم'],['ann','📢','رسايل'],['general','💬','العام'],['ai','🤖','المساعد']];if(n(ME)>=2)T.push(['vip','⭐','VIP']);T.push(['me','👤','حسابي']);
+ const cur=V.t=='chat'?(V.room=='ann'||V.room=='general'?V.room:(V.back||'').startsWith('me')?'me':'depts'):(V.t=='dept'||V.t=='prof')?'depts':V.t;
+ $('#nav').hidden=false;$('#nav').innerHTML=T.map(x=>`<button class="${cur==x[0]?'on':''}" onclick="tab('${x[0]}')"><b>${x[1]}</b>${x[2]}</button>`).join('');
+ $('#v').innerHTML=({home,depts,pyr,dept,prof,chat,vip,ai,me:mine}[V.t])();if($('#ms'))$('#v').scrollTop=1e9}
+function tab(t){if(t=='ann')openRoom('ann','الرسايل المهمة');else if(t=='general')openRoom('general','الشات العام');else if(t=='vip'){sub='chat';openRoom('vip','VIP')}else if(t=='me')openMe();else go({t})}
+const pts=x=>(x.rank=='leader'||x.is_memorial)?'':`<span class="tag">${x.points} نقطة</span>`;
+const av=(x,c='')=>x.avatar_url?`<img class="av ${c}" src="${esc(x.avatar_url)}">`:`<div class="av ${c}">${x.is_memorial?'🕊️':esc(x.full_name[0])}</div>`;
+const row=x=>`<div class="row" onclick="go({t:'prof',id:'${x.id}'})">${av(x)}<div class="grow"><b>${esc(x.full_name)}</b><div class="m">${x.is_memorial?'ليدر سابق • في ذكرى':RN[x.rank]+(x.department_id?' • '+esc(dn(x.department_id)):'')}</div></div>${pts(x)}</div>`;
+function sec(t,k){return `<h3>${t}</h3>`+(ed==k?`<textarea id="ed" rows="5">${esc(ST[k])}</textarea><button class="btn g" onclick="saveSec('${k}')">حفظ</button>`:`<p class="m" style="white-space:pre-wrap">${esc(ST[k]||'لسه ما اتكتبش.')}</p>${ME.rank=='leader'?`<button class="btn o" onclick="ed='${k}';draw()">تعديل</button>`:''}`)}
+const saveSec=k=>run(async()=>{await q(sb.from('team_settings').update({[k]:$('#ed').value}).eq('id',1));ed=0;await load();draw()});
+function home(){const l=P.find(x=>x.rank=='leader'&&!x.is_memorial),o=P.find(x=>x.is_memorial),mg=n(ME)>=3,L=ST.links||[];
+ return `<div class="card" style="text-align:center"><div class="logo">CDCE</div><h2 style="margin-top:10px">فريق CDCE</h2></div>
+<div class="card">${sec('نبذة عنا','about')}${sec('تاريخنا','history')}</div>
+<div class="card"><h3>قائد الفريق</h3>${l?row(l):'<p class="m">لسه ما اتحددش.</p>'}${o?`<div class="memo"><div class="m">🕊️ في ذكرى الليدر السابق</div>${row(o)}</div>`:''}</div>
+<div class="card"><h3>لينكاتنا</h3>${L.map((k,i)=>`<div class="row"><a class="grow" href="${esc(k.u)}" target="_blank" rel="noopener">${esc(k.t)}</a>${mg?`<button class="btn r" onclick="delLink(${i})">✕</button>`:''}</div>`).join('')||'<p class="m">مفيش لينكات لسه.</p>'}
+${mg?`<input id="lt" placeholder="اسم اللينك"><input id="lu" placeholder="https://..."><button class="btn o" onclick="addLink()">إضافة لينك</button>`:''}
+<h3>QR Code الفريق</h3>${ST.qr_url?`<img class="qr" src="${esc(ST.qr_url)}">`:'<div class="qr">لسه ما اترفعش</div>'}
+${mg?`<input type="file" accept="image/*" onchange="upImg(this.files[0],'team/qr.jpg',400,u=>q(sb.from('team_settings').update({qr_url:u}).eq('id',1)))">`:''}</div>`}
+const setLinks=L=>run(async()=>{await q(sb.from('team_settings').update({links:L}).eq('id',1));await load();draw()});
+function addLink(){const t=$('#lt').value.trim(),u=$('#lu').value.trim();if(!t||!/^https?:\/\//.test(u))return toast('اكتب اسم ولينك يبدأ بـ https://');setLinks([...(ST.links||[]),{t,u}])}
+function delLink(i){const L=[...(ST.links||[])];L.splice(i,1);setLinks(L)}
+function rs(f,mx,cb){if(!f)return;const u=URL.createObjectURL(f),i=new Image();i.onload=()=>{const k=Math.min(1,mx/Math.max(i.width,i.height)),c=document.createElement('canvas');c.width=i.width*k;c.height=i.height*k;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(i,0,0,c.width,c.height);c.toBlob(b=>cb(b),'image/jpeg',.8);URL.revokeObjectURL(u)};i.src=u}
+function upImg(f,path,mx,after){rs(f,mx,b=>run(async()=>{const{error}=await sb.storage.from('public-assets').upload(path,b,{upsert:true,contentType:'image/jpeg'});if(error)throw error;
+ await after(sb.storage.from('public-assets').getPublicUrl(path).data.publicUrl+'?t='+Date.now());await load();draw()}))}
+let nd=0;const depts=()=>`<h2>أقسام الفريق</h2>`+(n(ME)>=2?(nd?`<div class="card"><input id="dnm" placeholder="اسم القسم"><input id="dem" placeholder="إيموجي (اختياري)" maxlength="4"><button class="btn g" onclick="addDept()">إضافة</button> <button class="btn o" onclick="nd=0;draw()">إلغاء</button></div>`:`<button class="btn" style="width:100%;margin-bottom:10px" onclick="nd=1;draw()">+ قسم جديد</button>`):'')+DEP.map(d=>`<div class="card row" onclick="go({t:'dept',id:'${d.id}'})"><div class="av">${esc(d.emoji||'👥')}</div><div class="grow"><b>${esc(d.name)}</b><div class="m">${P.filter(x=>x.department_id==d.id&&!x.is_memorial).length} فرد</div></div>›</div>`).join('');
+function dept(){const d=DEP.find(x=>x.id==V.id),l=P.filter(x=>x.department_id==d.id&&!x.is_memorial).sort((a,b)=>n(b)-n(a)||b.points-a.points),ok=ME.department_id==d.id||ME.rank=='leader';
+ return `<div class="row"><button class="btn o" onclick="go({t:'depts'})">‹</button><h2 class="grow">${esc(d.name)}</h2>${ok?`<button class="btn g" onclick="openRoom('dept:${d.id}','شات ${esc(d.name)}','dept:${d.id}')">💬 شات القسم</button>`:'<span class="tag">🔒 الشات لأعضاء القسم</span>'}</div><br>`+(l.map(x=>`<div class="card">${row(x)}</div>`).join('')||'<p class="m">لسه مفيش أفراد.</p>')}
+const addDept=()=>{const nm=$('#dnm').value.trim();if(!nm)return toast('اكتب اسم القسم');run(async()=>{await q(sb.from('departments').insert({id:'d'+Date.now().toString(36),name:nm,emoji:$('#dem').value.trim()||'👥'}));nd=0;await load();draw()})};
+const chip=(x,p='')=>`<span class="tag" style="font-size:14px" onclick="go({t:'prof',id:'${x.id}'})">${p}${esc(x.full_name)}</span>`;
+const pyr=()=>`<h2>الهرم التنظيمي</h2>`+[4,3,2,1,0].map(r=>{const l=P.filter(x=>n(x)==r&&!x.is_memorial),o=r==4?P.filter(x=>x.is_memorial):[];
+ return `<div class="card" style="text-align:center;margin-inline:${(4-r)*7}px"><div class="m">${RN[RKS[r]]}</div>${l.map(x=>chip(x)).join('')||(r==4?'':'<span class="m">-</span>')}${o.map(x=>chip(x,'🕊️ ')).join('')}</div>`}).join('');
+const can=x=>n(ME)>=3&&n(ME)>n(x)&&!x.is_memorial&&x.rank!='leader';
+const pbody=x=>`<div class="card" style="text-align:center">${av(x,'big')}<h2 style="margin-top:10px">${esc(x.full_name)}</h2>
+ ${x.is_memorial?'<span class="tag">🕊️ ليدر سابق - الصفحة لإحياء ذكراه</span>':`<span class="tag">${RN[x.rank]}</span>${x.department_id?`<span class="tag">${esc(dn(x.department_id))}</span>`:''}${pts(x)}`}</div>
+ ${x.is_memorial?'':`<div class="card"><h3>اللقب (الشهرة)</h3><p>${esc(x.title||'لسه ما اتحددش')}</p><p class="m">اللقب بيتحدد بتصويت أغلبية الهيدات.</p>
+ <h3>الكلية والفرقة</h3><p>${esc(x.college||'-')} • ${esc(x.year_status||'-')}</p><h3>أقدر أقدم للفريق</h3><p>${esc(x.offer||'-')}</p></div>`}`;
+function prof(){const x=P.find(y=>y.id==V.id);if(!x)return'';const ld=ME.rank=='leader'&&!x.is_memorial&&x.id!=ME.id;
+ return `<button class="btn o" onclick="go({t:'${x.department_id?'dept':'home'}',id:'${x.department_id||''}'})">‹ رجوع</button><br><br>`+pbody(x)+
+ (!x.is_memorial&&x.id!=ME.id?`<button class="btn" style="width:100%;margin-bottom:10px" onclick="openRoom('dm:'+[ME.id,'${x.id}'].sort().join('_'),'${esc(x.full_name)}','prof:${x.id}')">💬 مراسلة خاصة</button>`:'')+
+ (can(x)?`<div class="card"><h3>إدارة النقاط</h3><div class="row"><button class="btn g grow" onclick="adj('${x.id}',10)">+10</button><button class="btn r grow" onclick="adj('${x.id}',-10)">-10</button></div><p class="m">مفيش خصم أو إضافة بين نفس الرتبة.</p></div>`:'')+
+ (ld?`<div class="card"><h3>إدارة (الليدر)</h3><select id="er">${RKS.slice(0,4).map(k=>`<option value="${k}" ${k==x.rank?'selected':''}>${RN[k]}</option>`).join('')}</select>
+ <select id="ed2">${DEP.map(d=>`<option value="${d.id}" ${d.id==x.department_id?'selected':''}>${esc(d.name)}</option>`).join('')}</select><input id="et" placeholder="اللقب" value="${esc(x.title||'')}"><button class="btn" onclick="adm('${x.id}')">حفظ</button></div>`:'')}
+const adj=(id,d)=>run(async()=>{const x=P.find(y=>y.id==id);await q(sb.from('profiles').update({points:x.points+d}).eq('id',id));await load();draw()});
+const adm=id=>run(async()=>{await q(sb.from('profiles').update({rank:$('#er').value,department_id:$('#ed2').value,title:$('#et').value.trim()||null}).eq('id',id));await load();draw()});
+/* chat */
+const curRoom=()=>V.t=='vip'?'vip':V.room,msHtml=()=>MS.map(m=>`<div class="bub ${m.sender==ME.id?'me':''}"><small>${esc(nameBy(m.sender))}</small>${esc(m.content)}</div>`).join('')||'<p class="m">لسه مفيش رسايل.</p>';
+const paintMs=()=>{const e=$('#ms');if(e){e.innerHTML=msHtml();$('#v').scrollTop=1e9}};
+let rt;function subRt(){if(rt)return;rt=sb.channel('m').on('postgres_changes',{event:'INSERT',schema:'public',table:'messages'},p=>{const m=p.new;if(m.room==curRoom()&&(V.t=='chat'||V.t=='vip'&&sub=='chat')&&!MS.some(x=>x.id==m.id)){MS.push(m);paintMs()}}).subscribe()}
+const chatBody=r=>`<div class="msgs" id="ms">${msHtml()}</div>`+((r!='ann'||n(ME)>=2)?`<div class="send"><input id="mi" placeholder="اكتب رسالة" onkeydown="if(event.key=='Enter')sendM()"><button class="btn" onclick="sendM()">➤</button></div>`:'<div class="card m">الرسايل هنا للليدر والهيدات ومساعديهم بس.</div>');
+const openRoom=(room,title,back)=>run(async()=>{if(room=='ann'||room=='vip')try{await sb.rpc('finalize_polls')}catch(e){}
+ MS=(await q(sb.from('messages').select('*').eq('room',room).order('id',{ascending:false}).limit(100))).reverse();V={t:room=='vip'?'vip':'chat',room,title,back};draw()});
+const chat=()=>`<div class="row">${V.back?`<button class="btn o" onclick="bk('${V.back}')">‹</button>`:''}<h2>${esc(V.title)}</h2></div>`+chatBody(V.room);
+function bk(b){if(b=='me')openMe();else{const[k,i]=b.split(':');go(k=='prof'?{t:'prof',id:i}:{t:'dept',id:i})}}
+const sendM=()=>{const i=$('#mi'),t=i.value.trim();if(!t)return;i.value='';run(async()=>{const m=await q(sb.from('messages').insert({room:curRoom(),content:t}).select().single());if(!MS.some(x=>x.id==m.id))MS.push(m);paintMs()})};
+const ai=()=>`<h2>المساعد الذكي</h2><div class="card">🤖 المساعد الذكي هيتضاف في الإصدار الجاي، وهيشتغل بأقوى ذكاء اصطناعي مجاني متاح وبيتبدّل تلقائياً.</div>`;
+/* VIP */
+const loadPolls=async()=>{PL=await q(sb.from('polls').select('*').order('created_at',{ascending:false}));VT=await q(sb.from('poll_votes').select('*'))};
+const vip=()=>`<div class="sub"><button class="btn ${sub=='chat'?'':'o'}" onclick="sub='chat';openRoom('vip','VIP')">شات VIP</button><button class="btn ${sub=='polls'?'':'o'}" onclick="subP()">التصويتات</button></div>`+(sub=='chat'?chatBody('vip'):polls());
+const subP=()=>run(async()=>{sub='polls';try{await sb.rpc('finalize_polls')}catch(e){}await loadPolls();V={t:'vip',room:'vip'};draw()});
+function polls(){const c=P.filter(x=>!x.is_memorial&&x.rank!='leader'&&x.id!=ME.id);
+ const f=ps?`<div class="card"><select id="pt">${c.map(x=>`<option value="${x.id}">${esc(x.full_name)} (${RN[x.rank]})</option>`).join('')}</select><input id="pn" placeholder="عنوان التصويت"><textarea id="po" rows="4" placeholder="كل اختيار في سطر. الاختيار الأول = موافقة"></textarea>
+ <select id="pd"><option value="1">دقيقة (تجربة)</option><option value="60">ساعة</option><option value="360">6 ساعات</option><option value="1440">يوم</option><option value="4320">3 أيام</option></select><button class="btn g" onclick="mkPoll()">إنشاء</button> <button class="btn o" onclick="ps=0;draw()">إلغاء</button></div>`:`<button class="btn" style="width:100%;margin-bottom:10px" onclick="ps=1;draw()">+ تصويت جديد</button>`;
+ return f+PL.map(p=>{const v=VT.find(x=>x.poll_id==p.id&&x.voter==ME.id),open=p.status=='open'&&new Date(p.ends_at)>new Date(),cn=i=>VT.filter(x=>x.poll_id==p.id&&x.choice==i).length;
+  return `<div class="card"><b>${esc(p.title)}</b><div class="m">على: ${esc(nameBy(p.target))} • من: ${esc(nameBy(p.created_by))}</div>`+(open?`<div class="m">ينتهي: ${new Date(p.ends_at).toLocaleString('ar-EG')}</div>`+(p.target==ME.id?'<div class="m">التصويت عليك، مش هتصوّت.</div>':p.options.map((o,i)=>`<button class="btn ${v&&v.choice==i?'g':'o'}" style="width:100%;margin:3px 0" onclick="vote('${p.id}',${i})">${esc(o)}</button>`).join('')+(v?`<div class="m">تعديلات متبقية: ${3-v.changes}</div>`:'')):`<div>${p.status=='approved'?'✅ تمت الموافقة':p.status=='rejected'?'❌ مرفوض':'⏳ بيتحسب...'}</div>`+p.options.map((o,i)=>`<div class="m">${esc(o)}: ${cn(i)}</div>`).join(''))+'</div>'}).join('')}
+const mkPoll=()=>{const o=$('#po').value.split('\n').map(s=>s.trim()).filter(Boolean),t=$('#pn').value.trim();if(!t||o.length<2||!$('#pt').value)return toast('اكتب عنوان واختيارين على الأقل');
+ run(async()=>{await q(sb.from('polls').insert({target:$('#pt').value,title:t,options:o,ends_at:new Date(Date.now()+$('#pd').value*60000).toISOString()}));ps=0;await loadPolls();draw()})};
+const vote=(id,i)=>run(async()=>{const v=VT.find(x=>x.poll_id==id&&x.voter==ME.id);if(v)await q(sb.from('poll_votes').update({choice:i}).eq('poll_id',id).eq('voter',ME.id));else await q(sb.from('poll_votes').insert({poll_id:id,choice:i}));await loadPolls();draw()});
+setInterval(()=>{if(U&&V.t=='vip'&&sub=='polls'&&!ps)run(async()=>{try{await sb.rpc('finalize_polls')}catch(e){}await loadPolls();draw()})},20000);
+/* account */
+const openMe=()=>run(async()=>{const r=await q(sb.from('messages').select('room').like('room','dm:%').order('id',{ascending:false}).limit(200));DMS=[...new Set(r.map(x=>x.room))];
+ RES=n(ME)>=3?await q(sb.rpc('list_resets')):[];CODES=ME.rank=='leader'?await q(sb.from('invite_codes').select('*').order('created_at',{ascending:false})):[];V={t:'me'};draw()});
+function mine(){return pbody(ME)+`<div class="card"><h3>أقدر أقدم للفريق</h3><input id="of" value="${esc(ME.offer||'')}"><button class="btn o" onclick="saveOf()">حفظ</button>
+ <h3>صورتي</h3><input type="file" accept="image/*" onchange="upImg(this.files[0],'avatars/'+U.id+'/a.jpg',300,u=>q(sb.from('profiles').update({avatar_url:u}).eq('id',ME.id)))">
+ <h3>تغيير كلمة السر</h3><input id="np" type="password" placeholder="كلمة السر الجديدة"><button class="btn o" onclick="chPw()">تغيير</button></div>
+ <div class="card"><h3>محادثاتي الخاصة</h3>${DMS.map(r=>{const o=r.slice(3).split('_').find(x=>x!=ME.id);return `<div class="row" style="padding:6px 0" onclick="openRoom('${r}','${esc(nameBy(o))}','me')">💬 <b>${esc(nameBy(o))}</b></div>`}).join('')||'<p class="m">مفيش محادثات خاصة لسه.</p>'}</div>
+ ${RES.length?`<div class="card"><h3>طلبات نسيان كلمة السر</h3>${RES.map(r=>`<div class="memo"><b>${esc(r.full_name)}</b> <span class="tag">${RN[r.rank]}</span><input id="rp_${r.id}" placeholder="كلمة سر مؤقتة (6+)"><button class="btn g" onclick="doReset('${r.id}')">تعيين</button></div>`).join('')}</div>`:''}
+ ${ME.rank=='leader'?`<div class="card"><h3>أكواد الدعوة</h3><select id="cr">${RKS.slice(0,4).map(k=>`<option value="${k}">${RN[k]}</option>`).join('')}</select><select id="cd">${DEP.map(d=>`<option value="${d.id}">${esc(d.name)}</option>`).join('')}</select><input id="cl" placeholder="اسم الشخص (للتذكير)"><button class="btn" onclick="mkCode()">إنشاء كود</button>
+ ${CODES.map(c=>`<div class="memo"><b style="letter-spacing:2px">${esc(c.code)}</b> <span class="tag">${RN[c.rank]}</span><span class="tag">${esc(dn(c.department_id))}</span><div class="m">${esc(c.label||'')} ${c.used_by?'• ✅ اتستخدم: '+esc(nameBy(c.used_by)):'• متاح'}</div></div>`).join('')}</div>`:''}
+ <button class="btn o" style="width:100%;margin-bottom:8px" onclick="newRec()">🔑 إنشاء كود استرجاع جديد</button><button class="btn o" style="width:100%;margin-bottom:8px" onclick="guide(0)">📖 دليل التطبيق ومعنى الرتب</button><button class="btn r" style="width:100%" onclick="out()">تسجيل خروج</button><button class="btn o" style="width:100%;margin-top:8px;color:var(--r);border-color:var(--r)" onclick="delMe()">🗑️ حذف حسابي</button>`}
+const saveOf=()=>run(async()=>{await q(sb.from('profiles').update({offer:$('#of').value}).eq('id',ME.id));await load();draw()});
+const chPw=()=>run(async()=>{const p=$('#np').value;if(p.length<6)return toast('كلمة السر لازم 6 حروف على الأقل');const{error}=await sb.auth.updateUser({password:p});if(error)throw error;toast('اتغيرت كلمة السر ✅');$('#np').value=''});
+const mkCode=()=>run(async()=>{const c=await q(sb.rpc('make_code',{r:$('#cr').value,d:$('#cd').value,lbl:$('#cl').value||null}));toast('الكود: '+c);await openMe()});
+const doReset=id=>run(async()=>{await q(sb.rpc('admin_reset',{req:id,newpw:$('#rp_'+id).value}));toast('اتعيّنت كلمة السر المؤقتة ✅');await openMe()});
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+boot();
+</script></body></html>
