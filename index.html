@@ -114,15 +114,26 @@ const out=async()=>{try{await sb.rpc('release_session')}catch(e){}await sb.auth.
 const newRec=()=>run(async()=>{const c=genRec();await q(sb.rpc('set_recovery',{c}));showRec(c)});
 const delMe=()=>{if(!confirm('هتحذف حسابك نهائياً وتتفك ارتباط كودك. متأكد؟'))return;run(async()=>{await q(sb.rpc('delete_my_account'));try{await sb.auth.signOut()}catch(e){}ME=null;U=null;mode='in';toast('اتحذف الحساب');login()})};
 setInterval(async()=>{if(!U)return;const{data,error}=await sb.rpc('ping_session',{sid:SID});if(!error&&data===false){await sb.auth.signOut();U=null;ME=null;toast('اتفتح الحساب من جهاز تاني');login()}},45000);
-const G=[['👋 أهلاً في CDCE','التطبيق ده بيجمع الفريق كله في مكان واحد: الأقسام والأعضاء والشاتات والتصويتات.'],['🔺 الرتب','ليدر: قائد الفريق وواحد بس.\nهيد: مسؤول قسم.\nمساعد هيد: معاون الهيد.\nبورد: عضو مجلس القسم.\nممبر: عضو في الفريق.\n\nرتبتك بيحددها الليدر وبتظهر في بروفايلك.'],['💬 الشاتات','العام: الفريق كله.\nشات القسم: أعضاء قسمك بس.\nالخاص: بينك وبين شخص من بروفايله.\nرسايل: إعلانات مهمة، بينزلها الليدر والهيدات ومساعدوهم.\nVIP: لمساعد الهيد وفوق، فيه شات وتصويتات.'],['⭐ النقاط والألقاب','الليدر والهيدات بيضيفوا أو يخصموا نقاط للأقل منهم رتبة بس. اللقب بيتحدد بتصويت الهيدات. الليدر مالوش نقاط.'],['🔐 حسابك','بتدخل برقم تليفونك وكلمة السر. أول ما تسجّل هتاخد كود استرجاع، اكتبه في مكان آمن. لو نسيت كلمة السر اضغط "نسيت كلمة السر" واكتب رقمك والكود. والحساب بيفتح على جهاز واحد في نفس الوقت.']];
-function guide(i){const o=$('#ov');if(i>=G.length){o.style.display='none';ls('cdce_seen','1');return}o.style.display='grid';
+let G=[];
+const gbuild=()=>{const ds={leader:'قائد الفريق وصلاحياته كاملة.',head:'إدارة الأعضاء الأقل منهم وإضافتهم بكود دعوة وتوزيع النقاط والتصويتات (الرتب اللي في المستوى ده متساوية في الصلاحيات).',assistant_head:'عضو فعّال: بيدخل VIP وبيعمل تصويتات وليه حق التصويت.',board:'عضو متميز: بيصوّت في التصويتات اللي الرئيس بيفتحها لرتبته.',member:'عضو في الفريق.'};
+ const rk=rkList().map(e=>{const isD=e[0].startsWith('def:'),b=isD?(RD.find(d=>d.id==e[0].slice(4))||{}).base:e[0].slice(5);return '• '+e[1]+': '+(ds[b]||'')}).join('\n');
+ const dp=DEP.map(d=>(d.emoji||'')+' '+d.name).join('، ');
+ return [['👋 أهلاً في CDCE','التطبيق ده بيجمع الفريق كله في مكان واحد: الأقسام والأعضاء والشاتات والتصويتات والمساعد الذكي.'+(dp?'\n\nأقسام الفريق: '+dp:'')],
+ ['🔺 الرتب (من الأعلى للأدنى)',rk+'\n\nالرتب بتتغير من تاب الهرم. والرئيس بيقدر يضيف رتب جديدة ويغيّر أسماءها.'],
+ ['💬 الشاتات','العام: الفريق كله.\nشات القسم: أعضاء قسمك بس.\n🔒 الشات الخاص: ابعت لأي حد من أي قسم. صور وفيديو وملفات ورسايل صوتية واستيكرات.\nاضغط ضغطة طويلة على أي رسالة (أو اسحبها) للرد والتوجيه والنسخ. تقدر تعدّل رسالتك لحد 24 ساعة وتحذفها للجميع. علامة ✓✓ الزرقا معناها اتشافت.\nرسايل: إعلانات مهمة من الرئيس والهيدات.\nVIP: لرتبة Staff وفوق.'],
+ ['🗳️ التصويتات','Staff وفوق بيعملوا تصويتات. الرئيس بيختار وقت إنشاء التصويت مين اللي يصوّت بحسب الرتبة. لو رتبتك مسموح لها هتلاقي تاب 🗳️ التصويتات.'],
+ ['🛠️ الهرم والتحكم','الهيدات وفوق: من تاب الهرم ← ✏️ تعديل تقدر تغيّر رتبة اللي أقل منك، وتضيف شخص جديد بكود دعوة. الشخص بيسجّل برتبته مباشرة.\nالرئيس: بيدير الأقسام والرتب وأسماءها.'],
+ ['🤖 المساعد الذكي','بيجاوب أسئلتك وبيبدّل تلقائياً بين أكتر من نموذج. ليك عدد أسئلة يومي. ممكن يغلط، وما تكتبش له بيانات خاصة.'],
+ ['⭐ النقاط والألقاب','الرئيس والهيدات بيضيفوا أو يخصموا نقاط للأقل منهم رتبة بس. الرئيس مالوش نقاط.'],
+ ['🔐 حسابك','بتدخل برقم تليفونك وكلمة السر. أول ما تسجّل هتاخد كود استرجاع، اكتبه في مكان آمن. تقدر تغيّر اسمك ورقمك وصورتك وكلمة السر من ⚙️ الإعدادات ← بياناتي. والحساب بيفتح على جهاز واحد في نفس الوقت.']]};
+function guide(i){if(i==0||!G.length)G=gbuild();const o=$('#ov');if(i>=G.length){o.style.display='none';ls('cdce_seen','1');return}o.style.display='grid';
  o.innerHTML=`<div class="card" style="max-width:420px;width:92%"><h2>${G[i][0]}</h2><p style="white-space:pre-wrap;line-height:1.9">${G[i][1]}</p><div class="row"><button class="btn o" onclick="guide(99)">تخطي</button><div class="grow"></div><button class="btn" onclick="guide(${i+1})">${i==G.length-1?'ابدأ':'التالي'}</button></div></div>`}
 const navT=()=>{const T=[['home','🏠','الرئيسية'],['depts','👥','الأقسام'],['pyr','🔺','الهرم'],['ann','📢','رسايل'],['general','💬','العام'],['pm','🔒','الشات الخاص'],['ai','🤖','المساعد']];T.push(n(ME)>=2?['vip','⭐','VIP']:['polls','🗳️','التصويتات']);T.push(['me','👤','حسابي'],['settings','⚙️','الإعدادات']);return T};
 function drawNav(){if(!ME)return;const cur=V.t=='chat'?(V.room=='ann'||V.room=='general'?V.room:isDm(V.room)?(V.back=='me'?'me':'pm'):'depts'):(V.t=='dept'||V.t=='prof')?'depts':V.t=='vip'&&n(ME)<2?'polls':V.t;
  $('#nav').hidden=false;$('#nav').innerHTML=navT().map(x=>`<button class="${cur==x[0]?'on':''}" onclick="tab('${x[0]}')"><b>${x[1]}${x[0]=='pm'&&DMU>0?`<i class="bg">${DMU}</i>`:''}</b>${x[2]}</button>`).join('')}
 function draw(){if(!ME){$('#v').innerHTML='<div class="card">حسابك لسه ما اتجهزش. اطلع وادخل تاني.</div><button class="btn r" onclick="out()">خروج</button>';return}
- drawNav();$('#v').className=(V.t=='chat'||(V.t=='vip'&&sub=='chat'))?'cm':'';
- $('#v').innerHTML=({home,depts,pyr,dept,prof,chat,vip,ai,me:mine,settings:stg,pm:pmv}[V.t])();const mm=$('#ms');if(mm){mm.scrollTop=mm.scrollHeight;hyd();rb()}}
+ drawNav();$('#v').className=(V.t=='chat'||V.t=='ai'||(V.t=='vip'&&sub=='chat'))?'cm':'';
+ $('#v').innerHTML=({home,depts,pyr,dept,prof,chat,vip,ai,me:mine,settings:stg,pm:pmv}[V.t])();const mm=$('#ms');if(mm){mm.scrollTop=mm.scrollHeight;hyd();rb()}const am=$('#am');if(am)am.scrollTop=am.scrollHeight}
 function tab(t){if(t=='ann')openRoom('ann','الرسايل المهمة');else if(t=='general')openRoom('general','الشات العام');else if(t=='vip'){sub='chat';openRoom('vip','VIP')}else if(t=='polls'){sub='polls';subP()}else if(t=='pm')openPm();else if(t=='me')openMe();else if(t=='settings')openStg();else go({t})}
 const pts=x=>(x.rank=='leader'||x.is_memorial)?'':`<span class="tag">${x.points} نقطة</span>`;
 const av=(x,c='')=>x.avatar_url?`<img class="av ${c}" src="${esc(x.avatar_url)}">`:`<div class="av ${c}">${x.is_memorial?'🕊️':esc(x.full_name[0])}</div>`;
@@ -155,7 +166,7 @@ const rnB=k=>PE&&ME.rank=='leader'?` <b onclick="rnEdit('${k}')">✏️</b>`:'';
 const rnEdit=k=>sheet(`<h3>تغيير اسم المستوى</h3><p class="m">بيتغيّر الاسم بس، والصلاحيات زي ما هي.</p><input id="rn" value="${esc(RN[k])}"><button class="btn g" style="width:100%" onclick="rnSave('${k}')">حفظ</button>`);
 const rnSave=k=>{const nm=$('#rn').value.trim();if(!nm)return toast('اكتب الاسم');run(async()=>{await q(sb.from('rank_names').upsert({rank:k,name:nm},{onConflict:'rank'}));await loadRD();closeSh();toast('اتغيّر ✅');draw()})};
 const pyr=()=>{const L=rkList(),lf=ME.rank=='leader',bt='style="padding:4px 12px;margin-top:6px"';
- return `<div class="row"><h2 class="grow">الهرم التنظيمي</h2>${n(ME)>=3?`<button class="btn ${PE?'g':'o'}" onclick="PE=!PE;draw()">${PE?'تم':'✏️ تعديل'}</button>`:''}</div>`+(PE?'<p class="m">اضغط على اسم لتغيير رتبته'+(lf?' أو قسمه':'')+'، أو ➕ لإضافة شخص جديد بكود دعوة'+(lf?'، أو ➕ رتبة جديدة لإنشاء رتبة بتاخد صلاحيات المستوى اللي تحته.':'.')+'</p>':'')+L.map((e,t)=>{const key=e[0],name=e[1],isD=key.startsWith('def:'),id=key.slice(4),k=isD?(RD.find(d=>d.id==id)||{}).base:key.slice(5),r=RKS.indexOf(k);
+ return `<div class="row"><h2 class="grow">الهرم التنظيمي <small class="m">v4.6</small></h2>${n(ME)>=3?`<button class="btn ${PE?'g':'o'}" onclick="PE=!PE;draw()">${PE?'تم':'✏️ تعديل'}</button>`:''}</div>`+(PE?'<p class="m">اضغط على اسم لتغيير رتبته'+(lf?' أو قسمه':'')+'، أو ➕ لإضافة شخص جديد بكود دعوة'+(lf?'، أو ➕ رتبة جديدة لإنشاء رتبة بتاخد صلاحيات المستوى اللي تحته.':'.')+'</p>':'')+L.map((e,t)=>{const key=e[0],name=e[1],isD=key.startsWith('def:'),id=key.slice(4),k=isD?(RD.find(d=>d.id==id)||{}).base:key.slice(5),r=RKS.indexOf(k);
   const ppl=isD?P.filter(x=>x.rank_def==id&&!x.is_memorial):P.filter(x=>n(x)==r&&!x.is_memorial&&!RD.some(d=>d.id==x.rank_def)),mem=k=='leader'&&!isD?P.filter(x=>x.is_memorial):[];
   const ed=PE&&lf?(isD?` <b onclick="rdEdit('${id}')">✏️</b> <b onclick="rdDel('${id}')">🗑️</b>`:rnB(k)):'';
   return `<div class="card" style="text-align:center;margin-inline:${t*8}px"><div class="m">${isD?'⭐ ':''}${esc(name)}${ed}</div>${ppl.map(x=>chip2(x)).join('')||(PE?'<span class="m">-</span>':'')}${mem.map(x=>chip2(x,'🕊️ ')).join('')}${PE&&r<=maxR()?`<div><button class="btn o" ${bt} onclick="pyAdd(${r},'${isD?id:''}')">➕ إضافة شخص</button></div>`:''}${PE&&lf&&!isD&&r<4?`<div><button class="btn o" ${bt} onclick="rdAdd(${r})">➕ رتبة جديدة</button></div>`:''}</div>`}).join('')};
@@ -213,7 +224,7 @@ const msHtml=()=>MS.map(mHtml).join('')||'<p class="m" style="text-align:center;
 const paintMs=f=>{const e=$('#ms');if(!e)return;if(!f&&[...document.querySelectorAll('audio')].some(a=>!a.paused))return;const bt=f||e.scrollHeight-e.scrollTop-e.clientHeight<140;e.innerHTML=msHtml();if(bt)e.scrollTop=e.scrollHeight;hyd()};
 const upd=m=>{const i=MS.findIndex(x=>x.id==m.id);if(i<0)MS.push(m);else MS[i]=m};
 const own=m=>{if(MS.some(x=>x.id==m.id))return;MS.push(m);const e=$('#ms');if(!e)return;if(MS.length==1)return paintMs(1);const bt=m.sender==ME.id||e.scrollHeight-e.scrollTop-e.clientHeight<140;e.insertAdjacentHTML('beforeend',mHtml(m,MS.length-1));if(bt)e.scrollTop=e.scrollHeight;hyd()};
-const sgn=async p=>{if(!MU[p]){const r=await sb.storage.from('chat-media').createSignedUrl(p,3600);MU[p]=r.data?r.data.signedUrl:'x'}return MU[p]};
+const sgn=async p=>{const c=MU[p];if(c&&Date.now()-c.t<3e6)return c.u;const r=await sb.storage.from('chat-media').createSignedUrl(p,3600),u=r.data?r.data.signedUrl:'x';MU[p]={u,t:Date.now()};return u};
 async function hyd(){for(const e of document.querySelectorAll('[data-p]')){const p=e.dataset.p;e.removeAttribute('data-p');if(!p)continue;const u=await sgn(p);if(u!='x')e.src=u}}
 const view=async p=>{const u=await sgn(p),v=$('#vw');v.innerHTML=`<img src="${u}"><a href="${u}" download onclick="event.stopPropagation()">⬇️ تحميل</a><span class="m">اضغط في أي مكان للإغلاق</span>`;v.style.display='flex';v.onclick=()=>v.style.display='none'};
 const openF=async p=>{const u=await sgn(p);window.open(u,'_blank')};
@@ -253,8 +264,8 @@ const sendM=()=>{const i=$('#mi'),t=i.value.trim();if(!t)return;i.value='';tg();
 const sendMedia=(b,kind,ext,name,dur)=>{const room=curRoom(),path=room.replace(/:/g,'__')+'/'+crypto.randomUUID()+'.'+ext,rp=RPL?RPL.id:null;RPL=null;rb();
  run(async()=>{const{error}=await sb.storage.from('chat-media').upload(path,b,{contentType:(b.type||'application/octet-stream').split(';')[0]});if(error)throw error;
  own(await q(sb.from('messages').insert({room,kind,media_url:path,file_name:name||null,dur:dur||null,reply_to:rp}).select().single()))})};
-const pick=(f,k)=>{closeSh();if(!f)return;if(f.size>MAXM&&k!='image')return toast('الحجم أكبر من 50 ميجا (أقصى حد في Supabase المجاني)');const ext=((f.name.split('.').pop()||'bin').toLowerCase().replace(/[^a-z0-9]/g,'').slice(0,5))||'bin';
- if(k=='image')rs(f,1280,b=>sendMedia(b,'image','jpg'));else sendMedia(f,k,ext,f.name)};
+const pick=(f,k)=>{closeSh();if(!f)return;if(f.size>MAXM)return toast('الحجم أكبر من 50 ميجا (أقصى حد في Supabase المجاني)');const ext=((f.name.split('.').pop()||'bin').toLowerCase().replace(/[^a-z0-9]/g,'').slice(0,5))||'bin';
+ if(k=='image'){if(f.size<=4e6&&/^image\/(jpeg|png|gif|webp)$/.test(f.type))sendMedia(f,'image',f.type.split('/')[1].replace('jpeg','jpg'));else rs(f,1600,b=>sendMedia(b,'image','jpg'))}else sendMedia(f,k,ext,f.name)};
 const attach=()=>sheet(`<label class="it">🖼️ صورة من المعرض<input type="file" accept="image/*" hidden onchange="pick(this.files[0],'image')"></label><label class="it">🎞️ فيديو من المعرض<input type="file" accept="video/*" hidden onchange="pick(this.files[0],'video')"></label><label class="it">📷 كاميرا (صورة)<input type="file" accept="image/*" capture="environment" hidden onchange="pick(this.files[0],'image')"></label><label class="it">🎥 كاميرا (فيديو)<input type="file" accept="video/*" capture="environment" hidden onchange="pick(this.files[0],'video')"></label><label class="it">📄 ملف<input type="file" hidden onchange="pick(this.files[0],'file')"></label>`);
 const rtick=()=>{const e=$('#rt');if(e&&REC2)e.textContent=fmt(Math.round((Date.now()-REC2.t0)/1000))};
 async function recStart(){if(!window.MediaRecorder||!navigator.mediaDevices)return toast('المتصفح مش بيدعم التسجيل');
@@ -279,7 +290,7 @@ const doFwd=room=>{closeSh();const m=FW;if(!m)return;run(async()=>{let mu=m.medi
  if(mu&&['image','video','audio','file'].includes(m.kind)){const np=room.replace(/:/g,'__')+'/'+crypto.randomUUID()+'.'+mu.split('.').pop();const{error}=await sb.storage.from('chat-media').copy(mu,np);if(error)throw error;mu=np}
  const r=await q(sb.from('messages').insert({room,kind:m.kind,content:m.content,media_url:mu,file_name:m.file_name,dur:m.dur,fwd:true}).select().single());if(room==curRoom())own(r);toast('اتوجّهت ✅')})};
 /* gestures: long-press = menu, swipe = reply */
-document.addEventListener('touchstart',e=>{const w=e.target.closest&&e.target.closest('.w');if(!w||e.target.closest('input,button,audio,video'))return;const t=e.touches[0];LP={id:+w.dataset.i,x:t.clientX,y:t.clientY,tm:setTimeout(()=>{if(LP){const i=LP.id;LP=null;msgMenu(i)}},450)}},{passive:true});
+document.addEventListener('touchstart',e=>{const w=e.target.closest&&e.target.closest('.w');if(!w||!w.dataset.i||e.target.closest('input,button,audio,video'))return;const t=e.touches[0];LP={id:+w.dataset.i,x:t.clientX,y:t.clientY,tm:setTimeout(()=>{if(LP){const i=LP.id;LP=null;msgMenu(i)}},450)}},{passive:true});
 document.addEventListener('touchmove',e=>{if(!LP)return;const t=e.touches[0],dx=t.clientX-LP.x,dy=t.clientY-LP.y;if(Math.abs(dy)>12){clearTimeout(LP.tm);LP=null}else if(Math.abs(dx)>70){clearTimeout(LP.tm);const i=LP.id;LP=null;reply(i)}},{passive:true});
 document.addEventListener('touchend',()=>{if(LP){clearTimeout(LP.tm);LP=null}});
 document.addEventListener('contextmenu',e=>{if(e.target.closest&&e.target.closest('.w'))e.preventDefault()});
@@ -293,14 +304,26 @@ function pml(){const qq=PMQ.trim(),ok=x=>!qq||x.full_name.includes(qq);
  const all=DEP.concat([{id:null,name:'من غير قسم'}]).map(d=>{const l=P.filter(x=>!x.is_memorial&&x.id!=ME.id&&x.department_id==d.id&&ok(x));return l.length?`<div class="card"><div class="m">${esc(d.emoji||'')} ${esc(d.name)}</div>${l.map(x=>`<div class="row" style="padding:6px 0" onclick="opn('${x.id}')">${av(x)}<div class="grow"><b>${esc(x.full_name)}</b><div class="m">${RN[x.rank]}</div></div>💬</div>`).join('')}</div>`:''}).join('');
  return (rc?`<h3>المحادثات</h3>${rc}`:'')+`<h3>كل الفريق</h3>`+(all||'<p class="m">مفيش نتائج.</p>')}
 const pmv=()=>`<h2>🔒 الشات الخاص</h2><input id="pq" placeholder="🔍 دوّر على اسم..." value="${esc(PMQ)}" oninput="PMQ=this.value;$('#pl').innerHTML=pml()"><div id="pl">${pml()}</div>`;
-const ai=()=>`<h2>المساعد الذكي</h2><div class="card">🤖 المساعد الذكي هيتضاف في الإصدار الجاي، وهيشتغل بأقوى ذكاء اصطناعي مجاني متاح وبيتبدّل تلقائياً.</div>`;
+let AM=[],AB=0;
+try{AM=JSON.parse(localStorage.getItem('cdce_ai')||'[]')}catch(e){AM=[]}
+const aiSave=()=>{try{localStorage.setItem('cdce_ai',JSON.stringify(AM.slice(-30)))}catch(e){}};
+const aiHtml=()=>(AM.map(m=>`<div class="w ${m.role=='user'?'me':''}"><div class="b">${esc(m.content)}</div></div>`).join('')+(AB?'<div class="w"><div class="b m">بيكتب...</div></div>':''))||'<p class="m" style="text-align:center;margin-top:30px">اسألني أي حاجة 👋<br>بتبدّل تلقائياً بين أكتر من نموذج.</p>';
+const ai=()=>`<div class="ch"><div class="av">🤖</div><div class="grow"><b>المساعد الذكي</b><div class="m">ممكن يغلط، راجع المعلومات المهمة</div></div><button class="ib" onclick="aiClear()">🗑️</button></div><div class="msgs" id="am">${aiHtml()}</div><div class="cmp"><input id="aq" placeholder="اسأل المساعد..." onkeydown="if(event.key=='Enter')aiSend()" autocomplete="off"><button class="ib sd" onclick="aiSend()">➤</button></div>`;
+const aiDraw=()=>{const e=$('#am');if(!e)return;e.innerHTML=aiHtml();e.scrollTop=e.scrollHeight};
+const aiClear=()=>{if(confirm('مسح المحادثة؟')){AM=[];aiSave();aiDraw()}};
+const aiSend=async()=>{const i=$('#aq'),t=i.value.trim();if(!t||AB)return;i.value='';AM.push({role:'user',content:t});AB=1;aiDraw();
+ try{const{data,error}=await sb.functions.invoke('ai-chat',{body:{messages:AM.filter(m=>!m.err).slice(-12).map(m=>({role:m.role,content:m.content}))}});
+  if(error){let m='مش قادر أرد دلوقتي. جرّب بعد شوية.';try{const j=await error.context.json();if(j.error)m=j.error}catch(e){}throw new Error(m)}
+  AM.push({role:'assistant',content:data.reply})}catch(e){AM.push({role:'assistant',content:'⚠️ '+(e.message||'حصل خطأ'),err:1})}
+ AB=0;aiSave();if($('#am'))aiDraw()};
 /* VIP */
 const loadPolls=async()=>{PL=await q(sb.from('polls').select('*').order('created_at',{ascending:false}));VT=await q(sb.from('poll_votes').select('*'))};
 const vip=()=>{if(n(ME)<2)return polls();const hb=`<div class="sub"${sub=='chat'?' style="padding:8px 12px;margin:0"':''}><button class="btn ${sub=='chat'?'':'o'}" onclick="sub='chat';openRoom('vip','VIP')">شات VIP</button><button class="btn ${sub=='polls'?'':'o'}" onclick="subP()">التصويتات</button></div>`;return hb+(sub=='chat'?chatBody('vip'):polls())};
 const subP=()=>run(async()=>{sub='polls';try{await sb.rpc('finalize_polls')}catch(e){}await loadPolls();V={t:'vip',room:'vip'};draw()});
 const myKey=()=>ME.rank_def?'def:'+ME.rank_def:'base:'+ME.rank;
 const okV=p=>p.voter_ranks?p.voter_ranks.includes(myKey()):n(ME)>=2;
-const rkList=()=>{const L=[];[4,3,2,1,0].forEach(r=>{const k=RKS[r],ds=RD.filter(d=>d.base==k);ds.filter(d=>d.sort<0).forEach(d=>L.push(['def:'+d.id,d.name]));L.push(['base:'+k,RN[k]]);ds.filter(d=>d.sort>=0).forEach(d=>L.push(['def:'+d.id,d.name]))});return L};
+const rkList0=()=>{const L=[];[4,3,2,1,0].forEach(r=>{const k=RKS[r],ds=RD.filter(d=>d.base==k);ds.filter(d=>d.sort<0).forEach(d=>L.push(['def:'+d.id,d.name]));L.push(['base:'+k,RN[k]]);ds.filter(d=>d.sort>=0).forEach(d=>L.push(['def:'+d.id,d.name]))});return L};
+const rkList=()=>{const C=['president','vice president','head','vice head','staff','best member','member'];let pk=0;return rkList0().map((e,i)=>{const c=C.indexOf(String(e[1]).trim().toLowerCase()),k=c>=0?c*10:pk+1;pk=k;return{e,k,i}}).sort((a,b)=>a.k-b.k||a.i-b.i).map(x=>x.e)};
 const rkName=key=>{const l=rkList().find(x=>x[0]==key);return l?l[1]:'?'};
 function polls(){const c=P.filter(x=>!x.is_memorial&&x.rank!='leader'&&x.id!=ME.id);
  const vr=ME.rank=='leader'?`<div class="m" style="margin-top:6px">مين يصوّت؟ (سيبها فاضية = Staff وفوق)</div><div>${rkList().map(x=>`<label style="display:inline-block;margin:3px 8px"><input type="checkbox" class="vr" value="${x[0]}" style="width:auto;margin-inline-end:4px">${esc(x[1])}</label>`).join('')}</div>`:'';
@@ -324,11 +347,17 @@ function stg(){const m=n(ME),t=SS.filter(x=>x[2]===undefined||(x[2]=='L'?ME.rank
 const sMe=()=>`<div class="card" style="text-align:center">${av(ME,'big')}<p class="m">${esc(ME.full_name)}</p>
  <label class="btn" style="display:block;margin:6px 0">🖼️ اختيار صورة من المعرض<input type="file" accept="image/*" hidden onchange="myAv(this.files[0])"></label>
  <label class="btn o" style="display:block">📷 التقاط صورة بالكاميرا<input type="file" accept="image/*" capture="user" hidden onchange="myAv(this.files[0])"></label></div>
- <div class="card"><h3>بياناتي</h3><input id="of" placeholder="أقدر أقدم للفريق" value="${esc(ME.offer||'')}"><input id="cl2" placeholder="الكلية" value="${esc(ME.college||'')}"><input id="yr" placeholder="الفرقة (أو متخرج)" value="${esc(ME.year_status||'')}"><button class="btn" onclick="saveMe()">حفظ</button></div>
+ <div class="card"><h3>بياناتي</h3><input id="nm" placeholder="الاسم" value="${esc(ME.full_name||'')}"><input id="of" placeholder="أقدر أقدم للفريق" value="${esc(ME.offer||'')}"><input id="cl2" placeholder="الكلية" value="${esc(ME.college||'')}"><input id="yr" placeholder="الفرقة (أو متخرج)" value="${esc(ME.year_status||'')}"><button class="btn" onclick="saveMe()">حفظ</button></div>
+ <div class="card"><h3>رقم الهاتف</h3><p class="m">ده رقم الدخول بتاعك. بعد التغيير هتدخل بالرقم الجديد.</p><input id="ph2" type="tel" inputmode="tel" placeholder="الرقم الجديد"><button class="btn o" onclick="chPhone()">تغيير الرقم</button></div>
  <div class="card"><h3>كلمة السر</h3><input id="np" type="password" placeholder="كلمة السر الجديدة"><button class="btn o" onclick="chPw()">تغيير</button><button class="btn o" style="margin-top:8px;width:100%" onclick="newRec()">🔑 كود استرجاع جديد</button></div>
  <button class="btn o" style="width:100%;margin-bottom:8px" onclick="guide(0)">📖 دليل التطبيق ومعنى الرتب</button><button class="btn r" style="width:100%" onclick="out()">تسجيل خروج</button><button class="btn o" style="width:100%;margin-top:8px;color:var(--r);border-color:var(--r)" onclick="delMe()">🗑️ حذف حسابي</button>`;
 const myAv=f=>upImg(f,'avatars/'+U.id+'/a.jpg',400,u=>q(sb.from('profiles').update({avatar_url:u}).eq('id',ME.id)));
-const saveMe=()=>run(async()=>{await q(sb.from('profiles').update({offer:$('#of').value,college:$('#cl2').value,year_status:$('#yr').value}).eq('id',ME.id));await load();toast('اتحفظ ✅');draw()});
+const saveMe=()=>run(async()=>{const nm=$('#nm').value.trim();if(nm.length<2)return toast('اكتب اسمك');await q(sb.from('profiles').update({full_name:nm,offer:$('#of').value,college:$('#cl2').value,year_status:$('#yr').value}).eq('id',ME.id));await load();toast('اتحفظ ✅');draw()});
+const chPhone=()=>run(async()=>{const p=$('#ph2').value.trim(),d=norm(p);if(d.length<8||d.length>15)return toast('اكتب رقم صحيح');
+ const{error}=await sb.functions.invoke('change-phone',{body:{phone:p,digits:d}});
+ if(error){let m='مقدرتش أغيّر الرقم. جرّب تاني.';try{const j=await error.context.json();if(j.error)m=j.error}catch(e){}return toast(m)}
+ try{await sb.auth.refreshSession()}catch(e){}$('#ph2').value='';toast('اتغيّر رقمك ✅ ادخل بيه المرة الجاية')});
+
 const chPw=()=>run(async()=>{const p=$('#np').value;if(p.length<6)return toast('كلمة السر لازم 6 حروف على الأقل');const{error}=await sb.auth.updateUser({password:p});if(error)throw error;toast('اتغيرت كلمة السر ✅');$('#np').value=''});
 function sMem(){const l=P.filter(x=>!x.is_memorial).sort((a,b)=>n(b)-n(a)),x=P.find(y=>y.id==sm);
  let h=`<div class="card"><p class="m">اضغط على شخص لإدارته.</p>`+l.map(y=>`<div class="row" style="padding:6px 0" onclick="sm='${y.id}';draw()">${av(y)}<div class="grow"><b>${esc(y.full_name)}</b><div class="m">${RN[y.rank]} • ${esc(dn(y.department_id)||'-')}</div></div>›</div>`).join('')+'</div>';
