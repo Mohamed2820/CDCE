@@ -306,7 +306,7 @@ function pml(){const qq=PMQ.trim(),ok=x=>!qq||x.full_name.includes(qq);
 const pmv=()=>`<h2>🔒 الشات الخاص</h2><input id="pq" placeholder="🔍 دوّر على اسم..." value="${esc(PMQ)}" oninput="PMQ=this.value;$('#pl').innerHTML=pml()"><div id="pl">${pml()}</div>`;
 let AIADM=false,AP=[],AEV=[],AT={},AL=0,ASUM='';
 const aiAdm=()=>sb.rpc('is_ai_admin').then(r=>{AIADM=!!r.data}).catch(()=>{});
-const aiCall=async body=>{const{data,error}=await sb.functions.invoke('ai-chat',{body});if(error){let m='حصل خطأ. جرّب تاني.';try{const j=await error.context.json();if(j.error)m=j.error}catch(e){}throw new Error(m)}return data};
+const aiCall=async body=>{const{data,error}=await sb.functions.invoke('ai-chat2',{body});if(error){let m='حصل خطأ. جرّب تاني.';try{const j=await error.context.json();if(j.error)m=j.error}catch(e){}throw new Error(m)}return data};
 const aiLoad=()=>run(async()=>{try{const d=await aiCall({action:'list'});AP=d.providers||[];AEV=d.env||[]}catch(e){toast(e.message)}draw()});
 const KL={groq:'Groq',github:'GitHub Models',cloudflare:'Cloudflare Workers AI',openrouter:'OpenRouter',mistral:'Mistral',custom:'مخصص (متوافق مع OpenAI)'};
 const sAik=()=>{if(!AL){AL=1;aiLoad();return '<div class="card m">بيحمّل...</div>'}
@@ -331,7 +331,7 @@ const ai=()=>`<div class="ch"><div class="av">🤖</div><div class="grow"><b>ا�
 const aiDraw=()=>{const e=$('#am');if(!e)return;e.innerHTML=aiHtml();e.scrollTop=e.scrollHeight};
 const aiClear=()=>{if(confirm('مسح المحادثة؟')){AM=[];aiSave();aiDraw()}};
 const aiSend=async()=>{const i=$('#aq'),t=i.value.trim();if(!t||AB)return;i.value='';AM.push({role:'user',content:t});AB=1;aiDraw();
- try{const{data,error}=await sb.functions.invoke('ai-chat',{body:{messages:AM.filter(m=>!m.err).slice(-12).map(m=>({role:m.role,content:m.content}))}});
+ try{const{data,error}=await sb.functions.invoke('ai-chat2',{body:{messages:AM.filter(m=>!m.err).slice(-12).map(m=>({role:m.role,content:m.content}))}});
   if(error){let m='مش قادر أرد دلوقتي. جرّب بعد شوية.';try{const j=await error.context.json();if(j.error)m=j.error}catch(e){}throw new Error(m)}
   AM.push({role:'assistant',content:data.reply})}catch(e){AM.push({role:'assistant',content:'⚠️ '+(e.message||'حصل خطأ'),err:1})}
  AB=0;aiSave();if($('#am'))aiDraw()};
