@@ -304,10 +304,10 @@ function pml(){const qq=PMQ.trim(),ok=x=>!qq||x.full_name.includes(qq);
  const all=DEP.concat([{id:null,name:'من غير قسم'}]).map(d=>{const l=P.filter(x=>!x.is_memorial&&x.id!=ME.id&&x.department_id==d.id&&ok(x));return l.length?`<div class="card"><div class="m">${esc(d.emoji||'')} ${esc(d.name)}</div>${l.map(x=>`<div class="row" style="padding:6px 0" onclick="opn('${x.id}')">${av(x)}<div class="grow"><b>${esc(x.full_name)}</b><div class="m">${RN[x.rank]}</div></div>💬</div>`).join('')}</div>`:''}).join('');
  return (rc?`<h3>المحادثات</h3>${rc}`:'')+`<h3>كل الفريق</h3>`+(all||'<p class="m">مفيش نتائج.</p>')}
 const pmv=()=>`<h2>🔒 الشات الخاص</h2><input id="pq" placeholder="🔍 دوّر على اسم..." value="${esc(PMQ)}" oninput="PMQ=this.value;$('#pl').innerHTML=pml()"><div id="pl">${pml()}</div>`;
-let AIADM=false,AP=[],AEV=[],AT={},AL=0,ASUM='',AMOD={},AMREQ={};
+let AIADM=false,AP=[],AEV=[],AT={},AL=0,ASUM='',AMOD={},AMREQ={},AKB=[];
 const aiAdm=()=>sb.rpc('is_ai_admin').then(r=>{AIADM=!!r.data}).catch(()=>{});
 const aiCall=async body=>{const{data,error}=await sb.functions.invoke('ai-chat2',{body});if(error){let m='حصل خطأ. جرّب تاني.';try{const j=await error.context.json();if(j.error)m=j.error}catch(e){}throw new Error(m)}return data};
-const aiLoad=()=>run(async()=>{try{const d=await aiCall({action:'list'});AP=d.providers||[];AEV=d.env||[]}catch(e){toast(e.message)}draw()});
+const aiLoad=()=>run(async()=>{try{const d=await aiCall({action:'list'});AP=d.providers||[];AEV=d.env||[];if(AIADM){const k=await aiCall({action:'kb_list'});AKB=k.items||[]}}catch(e){toast(e.message)}draw()});
 const KL={auto:'تلقائي',groq:'Groq',github:'GitHub Models',cloudflare:'Cloudflare Workers AI',openrouter:'OpenRouter',mistral:'Mistral',custom:'مخصص (متوافق مع OpenAI)',openai:'OpenAI',deepseek:'DeepSeek',xai:'xAI (Grok)',cerebras:'Cerebras',sambanova:'SambaNova',together:'Together AI',fireworks:'Fireworks AI',huggingface:'Hugging Face',nvidia:'NVIDIA NIM',perplexity:'Perplexity',moonshot:'Moonshot (Kimi)',cohere:'Cohere',anthropic:'Anthropic (Claude)',tavily:'Tavily (بحث على الإنترنت)',brave:'Brave Search (بحث على الإنترنت)'};
 const LBL=k=>KL[k]||k;
 const rsT=r=>r.ok?`<div class="m">✅ نجح مع: ${esc(r.model)} (${r.ms}ms)</div>`:`<div class="m" style="color:var(--r)">❌ ${esc(r.error||'فشل')}</div>`;
@@ -317,11 +317,15 @@ const modelBox=p=>{if(p.kind=='tavily'||p.kind=='brave')return '<div class="m">�
  if(m.err)return `<div class="m" style="color:var(--r)">مقدرتش أجيب النماذج: ${esc(m.err)}</div>`;
  const opts=(m.models||[]).map(x=>`<option value="${esc(x)}" ${x==p.model?'selected':''}>${esc(x)}</option>`).join('');
  return `<select onchange="aiSetM('${p.id}',this.value)"><option value="">تلقائي (أول نموذج متاح)</option>${opts}</select>`};
+const kbCard=()=>`<div class="card"><h3>📚 معلومات الفريق (المساعد بيتعلّم منها)</h3><p class="m">اكتب أي معلومة عن الفريق: اللجان ووظايفها والقواعد والأحداث. المساعد بيستخدمها في كل الشاتات.</p><button class="btn g" onclick="kbForm()">➕ معلومة جديدة</button>${AKB.map(k=>`<div class="card" style="margin-top:8px"><div class="row"><b class="grow">${esc(k.title)}</b><span onclick="kbForm('${k.id}')" style="cursor:pointer">✏️</span>&nbsp;&nbsp;<span onclick="kbDel('${k.id}')" style="cursor:pointer">🗑️</span></div><div class="m" style="white-space:pre-wrap">${esc(k.content||'')}</div></div>`).join('')}</div>`;
+const kbForm=id=>{const k=AKB.find(x=>x.id==id)||{title:'',content:''};sheet(`<h3>معلومة</h3><input id="kt" placeholder="العنوان" value="${esc(k.title)}"><textarea id="kc" rows="8" placeholder="المحتوى">${esc(k.content||'')}</textarea><button class="btn g" style="width:100%;margin-top:8px" onclick="kbSave('${id||''}')">حفظ</button>`)};
+const kbSave=id=>{const title=$('#kt').value.trim(),content=$('#kc').value.trim();if(!title)return toast('اكتب العنوان');run(async()=>{try{await aiCall({action:'kb_save',id:id||null,title,content});closeSh();AL=0;toast('اتحفظ ✅')}catch(e){toast(e.message)}draw()})};
+const kbDel=id=>{if(!confirm('حذف المعلومة؟'))return;run(async()=>{try{await aiCall({action:'kb_delete',id});AL=0}catch(e){toast(e.message)}draw()})};
 const sAik=()=>{if(!AL){AL=1;aiLoad();return '<div class="card m">بيحمّل...</div>'}
  return `<div class="card"><h3>🤖 الذكاء الاصطناعي</h3><p class="m">إزاي بيشتغل: كل مزوّد ليه مفتاح. التطبيق بيجرّب المزوّد اللي فوق الأول، ولو وقع أو خلصت حصته بيجرّب اللي تحته تلقائياً. تقدر تشغّل أو توقف أي مزوّد، ترتّبهم بالأسهم، وتختار النموذج لكل واحد.</p>
  <div class="row" style="flex-wrap:wrap;gap:6px"><button class="btn g" onclick="aiForm()">➕ مفتاح جديد</button><button class="btn o" onclick="aiTest('')">🧪 اختبار الكل</button><button class="btn o" onclick="AL=0;AMOD={};AMREQ={};draw()">↻ تحديث</button></div>
  ${ASUM?`<p class="m" style="margin-top:8px">${esc(ASUM)}</p>`:''}</div>`
- +(AP.length?'':'<div class="card m">لسه مفيش مفاتيح. دوس ➕ مفتاح جديد.</div>')
+ +(AIADM?kbCard():'')+(AP.length?'':'<div class="card m">لسه مفيش مفاتيح. دوس ➕ مفتاح جديد.</div>')
  +AP.map((p,i)=>`<div class="card"><div class="row"><b class="grow">${i+1}. ${esc(LBL(p.kind))}</b><span class="m">${p.enabled?'شغّال':'موقوف'}</span></div>
  <div class="m" style="direction:ltr;text-align:start">••••${esc(p.key_tail||'')}</div>
  <div class="m" style="margin-top:6px">الحالة: ${rowSt(p)}</div>${AT[p.id]?rsT(AT[p.id]):(p.last_err?`<div class="m" style="color:var(--r)">${esc(p.last_err)}</div>`:'')}
@@ -346,10 +350,13 @@ const aiNew=()=>{AC=null;CM=[];SBO=false;draw()};
 const aiDelChat=id=>{if(!confirm('حذف المحادثة؟'))return;run(async()=>{await q(sb.from('ai_chats').delete().eq('id',id));if(AC==id){AC=null;CM=[]}await aiLoadCH();draw()})};
 const setMode=m=>{MODE=m;draw()};
 const aiSaveChat=async()=>{const msgs=CM.slice(-60);try{if(!AC){const f=CM.find(m=>m.role=='user');const r=await q(sb.from('ai_chats').insert({title:(f?f.content:'محادثة جديدة').slice(0,40),messages:msgs}).select('id').single());AC=r.id}else await q(sb.from('ai_chats').update({messages:msgs,updated_at:new Date().toISOString()}).eq('id',AC));await aiLoadCH()}catch(e){toast('ما قدرتش أحفظ المحادثة')}};
-const aiSend=async()=>{const i=$('#aq'),t=(i&&i.value||'').trim();if(!t||AB2)return;if(i)i.value='';CM.push({role:'user',content:t,t:Date.now()});AB2=true;draw();
- try{const d=await aiCall({messages:CM.slice(-14).map(m=>({role:m.role,content:m.content})),mode:MODE,web:WEB,social:SOC});CM.push({role:'assistant',content:d.reply,model:d.model,sources:d.sources||[],t:Date.now()})}
- catch(e){CM.push({role:'assistant',content:'⚠️ '+(e.message||'حصل خطأ'),err:1,t:Date.now()})}
- AB2=false;await aiSaveChat();draw()};
+let AID=0;
+const aiSend=async()=>{const i=$('#aq'),t=(i&&i.value||'').trim();if(!t||AB2)return;if(i)i.value='';const id=++AID;CM.push({role:'user',content:t,t:Date.now()});AB2=true;draw();
+ let m;try{const d=await aiCall({messages:CM.slice(-14).map(x=>({role:x.role,content:x.content})),mode:MODE,web:WEB,social:SOC});m={role:'assistant',content:d.reply,model:d.model,sources:d.sources||[],t:Date.now()}}
+ catch(e){m={role:'assistant',content:'⚠️ '+(e.message||'حصل خطأ'),err:1,t:Date.now()}}
+ if(id!==AID)return;CM.push(m);AB2=false;await aiSaveChat();draw()};
+const aiStop=()=>{AID++;AB2=false;aiSaveChat();draw()};
+const aiBtn=()=>AB2?aiStop():aiSend();
 const aiMsg=m=>{const me=m.role=='user';
  const src=(m.sources||[]).length?`<div style="margin-top:8px;font-size:12px">${m.sources.map((s,i)=>`<div style="margin:3px 0"><a href="${esc(s.url)}" target="_blank" style="color:${AG}">[${i+1}] ${esc(s.title||s.url)}</a></div>`).join('')}</div>`:'';
  return `<div style="display:flex;justify-content:${me?'flex-end':'flex-start'};margin:10px 0"><div style="max-width:88%;padding:10px 12px;border-radius:14px;background:${me?'#14532d':'#111a14'};border:1px solid ${me?'#166534':'#1f2e23'}"><div style="line-height:1.8">${mdh(m.content)}</div>${src}<div style="font-size:11px;opacity:.6;margin-top:6px;text-align:${me?'start':'end'}">${m.model?esc(String(m.model).split(' · ')[0])+' • ':''}${m.t?tfmt(m.t):''}</div></div></div>`};
@@ -361,7 +368,7 @@ const ai=()=>{if(!AOK){AOK=true;aiLoadCH().then(()=>draw())}
  ${SBO?aiSide():''}
  <div id="am" style="flex:1;min-height:0;overflow-y:auto;padding:0 12px">${CM.length?CM.map(aiMsg).join(''):`<div style="text-align:center;margin-top:40px;opacity:.85"><div style="font-size:42px">🤖</div><p>اسألني أي حاجة. أقدر أفكّر بعمق، أو أجاوب بسرعة، أو أبحث في الإنترنت وأديك المصادر.</p><p style="font-size:12px;opacity:.6">${tfmt(Date.now())}</p></div>`}${AB2?'<div style="opacity:.7;margin:10px 0">بيفكّر...</div>':''}</div>
  <div style="padding:8px 10px;border-top:1px solid #1f2e23;display:flex;gap:6px;flex-wrap:wrap">${pill(MODE=='fast','⚡ سريع',"setMode('fast')")}${pill(MODE=='deep','🧠 معمّق',"setMode('deep')")}${pill(WEB,'🌐 بحث ويب',"WEB=!WEB;draw()")}${pill(SOC,'💬 سوشيال',"SOC=!SOC;draw()")}</div>
- <div style="display:flex;gap:8px;padding:10px;border-top:1px solid #1f2e23"><input id="aq" placeholder="اكتب سؤالك..." onkeydown="if(event.key=='Enter')aiSend()" autocomplete="off" style="flex:1;border-radius:22px;background:#111a14;border:1px solid #1f2e23;color:#e6f7ec;padding:10px 14px"><button onclick="aiSend()" style="width:44px;height:44px;border-radius:50%;border:0;background:${AG};color:#052e16;font-size:18px">➤</button></div></div>`};
+ <div style="display:flex;gap:8px;padding:10px;border-top:1px solid #1f2e23"><textarea id="aq" rows="1" placeholder="اكتب سؤالك..." style="flex:1;resize:none;max-height:120px;border-radius:22px;background:#111a14;border:1px solid #1f2e23;color:#e6f7ec;padding:10px 14px;font:inherit"></textarea><button onclick="aiBtn()" style="width:44px;height:44px;border-radius:50%;border:0;background:${AG};color:#052e16;font-size:18px">${AB2?'⏹':'➤'}</button></div></div>`};
 /* VIP */
 const loadPolls=async()=>{PL=await q(sb.from('polls').select('*').order('created_at',{ascending:false}));VT=await q(sb.from('poll_votes').select('*'))};
 const vip=()=>{if(n(ME)<2)return polls();const hb=`<div class="sub"${sub=='chat'?' style="padding:8px 12px;margin:0"':''}><button class="btn ${sub=='chat'?'':'o'}" onclick="sub='chat';openRoom('vip','VIP')">شات VIP</button><button class="btn ${sub=='polls'?'':'o'}" onclick="subP()">التصويتات</button></div>`;return hb+(sub=='chat'?chatBody('vip'):polls())};
