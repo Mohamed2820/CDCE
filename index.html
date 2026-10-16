@@ -308,11 +308,11 @@ let AIADM=false,AP=[],AEV=[],AT={},AL=0,ASUM='',AMOD={},AMREQ={};
 const aiAdm=()=>sb.rpc('is_ai_admin').then(r=>{AIADM=!!r.data}).catch(()=>{});
 const aiCall=async body=>{const{data,error}=await sb.functions.invoke('ai-chat2',{body});if(error){let m='حصل خطأ. جرّب تاني.';try{const j=await error.context.json();if(j.error)m=j.error}catch(e){}throw new Error(m)}return data};
 const aiLoad=()=>run(async()=>{try{const d=await aiCall({action:'list'});AP=d.providers||[];AEV=d.env||[]}catch(e){toast(e.message)}draw()});
-const KL={auto:'تلقائي',groq:'Groq',github:'GitHub Models',cloudflare:'Cloudflare Workers AI',openrouter:'OpenRouter',mistral:'Mistral',custom:'مخصص (متوافق مع OpenAI)',openai:'OpenAI',deepseek:'DeepSeek',xai:'xAI (Grok)',cerebras:'Cerebras',sambanova:'SambaNova',together:'Together AI',fireworks:'Fireworks AI',huggingface:'Hugging Face',nvidia:'NVIDIA NIM',perplexity:'Perplexity',moonshot:'Moonshot (Kimi)',cohere:'Cohere',anthropic:'Anthropic (Claude)'};
+const KL={auto:'تلقائي',groq:'Groq',github:'GitHub Models',cloudflare:'Cloudflare Workers AI',openrouter:'OpenRouter',mistral:'Mistral',custom:'مخصص (متوافق مع OpenAI)',openai:'OpenAI',deepseek:'DeepSeek',xai:'xAI (Grok)',cerebras:'Cerebras',sambanova:'SambaNova',together:'Together AI',fireworks:'Fireworks AI',huggingface:'Hugging Face',nvidia:'NVIDIA NIM',perplexity:'Perplexity',moonshot:'Moonshot (Kimi)',cohere:'Cohere',anthropic:'Anthropic (Claude)',tavily:'Tavily (بحث على الإنترنت)',brave:'Brave Search (بحث على الإنترنت)'};
 const LBL=k=>KL[k]||k;
 const rsT=r=>r.ok?`<div class="m">✅ نجح مع: ${esc(r.model)} (${r.ms}ms)</div>`:`<div class="m" style="color:var(--r)">❌ ${esc(r.error||'فشل')}</div>`;
 const rowSt=p=>AT[p.id]?(AT[p.id].ok?'✅ شغّال':'❌ فشل'):(p.last_err?'❌ فشل آخر مرة':(p.last_ok?'✅ شغّال':'⚪ لسه ما اتجربش'));
-const modelBox=p=>{const m=AMOD[p.id];
+const modelBox=p=>{if(p.kind=='tavily'||p.kind=='brave')return '<div class="m">ده مفتاح بحث، بيُستخدم لما تفعّل 🌐 بحث ويب.</div>';const m=AMOD[p.id];
  if(!m){if(!AMREQ[p.id]){AMREQ[p.id]=1;aiLoadM(p.id)}return '<div class="m">بيجيب النماذج...</div>'}
  if(m.err)return `<div class="m" style="color:var(--r)">مقدرتش أجيب النماذج: ${esc(m.err)}</div>`;
  const opts=(m.models||[]).map(x=>`<option value="${esc(x)}" ${x==p.model?'selected':''}>${esc(x)}</option>`).join('');
@@ -328,26 +328,40 @@ const sAik=()=>{if(!AL){AL=1;aiLoad();return '<div class="card m">بيحمّل..
  <div class="m" style="margin-top:8px">النموذج:</div>${modelBox(p)}
  <div class="row" style="flex-wrap:wrap;gap:6px;margin-top:8px"><button class="btn g" onclick="aiTest('${p.id}')">🧪 Test</button><button class="btn ${p.enabled?'o':'g'}" onclick="aiTog('${p.id}')">${p.enabled?'⏸ إيقاف':'▶ تشغيل'}</button><button class="btn o" onclick="aiMv(${i},-1)">⬆️</button><button class="btn o" onclick="aiMv(${i},1)">⬇️</button><button class="btn o" style="color:var(--r)" onclick="aiDel('${p.id}')">🗑️</button></div></div>`).join('')
  +(AEV.length?`<div class="card"><h3>مفاتيح من Supabase Secrets</h3><p class="m">دي بتتجرّب بعد المفاتيح اللي فوق، وبتتغيّر من لوحة Supabase.</p>${AEV.map(e=>`<div class="row" style="padding:4px 0"><b class="grow">${esc(LBL(e.kind))}</b></div>${AT['env:'+e.kind]?rsT(AT['env:'+e.kind]):''}`).join('')}</div>`:'')};
-const aiForm=()=>{sheet(`<h3>مفتاح جديد</h3><p class="m">الصق المفتاح بس. التطبيق بيعرف المزوّد لوحده من شكله.</p><input id="akey" type="password" autocomplete="off" placeholder="الصق المفتاح هنا"><button class="btn g" style="width:100%;margin-top:8px" onclick="aiKSave()">حفظ</button>`)};
-const aiKSave=()=>{const k=$('#akey').value.trim();if(!k)return toast('الصق المفتاح');run(async()=>{try{const d=await aiCall({action:'save',kind:'auto',label:'مفتاح',api_key:k});closeSh();AL=0;toast('اتحفظ ✅ المزوّد: '+LBL(d.kind))}catch(e){toast(e.message)}draw()})};
+const aiForm=()=>{sheet(`<h3>مفتاح جديد</h3><p class="m">التلقائي بيعرف المزوّد من شكل المفتاح. لو مش عارف، اختار بنفسك (Brave مثلاً).</p><select id="ak">${Object.keys(KL).map(k=>`<option value="${k}">${KL[k]}</option>`).join('')}</select><input id="akey" type="password" autocomplete="off" placeholder="الصق المفتاح هنا"><button class="btn g" style="width:100%;margin-top:8px" onclick="aiKSave()">حفظ</button>`)};
+const aiKSave=()=>{const k=$('#akey').value.trim();if(!k)return toast('الصق المفتاح');run(async()=>{try{const d=await aiCall({action:'save',kind:$('#ak').value,label:'مفتاح',api_key:k});closeSh();AL=0;toast('اتحفظ ✅ المزوّد: '+LBL(d.kind))}catch(e){toast(e.message)}draw()})};
 const aiTog=id=>{const p=AP.find(x=>x.id==id);run(async()=>{try{await aiCall({action:'save',id,enabled:!p.enabled});AL=0}catch(e){toast(e.message)}draw()})};
 const aiMv=(i,d)=>{const j=i+d;if(j<0||j>=AP.length)return;const a=AP.slice();[a[i],a[j]]=[a[j],a[i]];run(async()=>{try{await aiCall({action:'order',ids:a.map(x=>x.id)});AL=0}catch(e){toast(e.message)}draw()})};
 const aiDel=id=>{if(!confirm('حذف المفتاح ده؟'))return;run(async()=>{try{await aiCall({action:'delete',id});AL=0}catch(e){toast(e.message)}draw()})};
 const aiLoadM=id=>run(async()=>{try{AMOD[id]=await aiCall({action:'models',id})}catch(e){AMOD[id]={models:[],err:e.message}}draw()});
 const aiSetM=(id,m)=>run(async()=>{try{await aiCall({action:'setmodel',id,model:m});AL=0;toast('اتحفظ النموذج ✅')}catch(e){toast(e.message)}draw()});
 const aiTest=id=>run(async()=>{try{const d=await aiCall({action:'test',id:id||null});if(!id)AT={};(d.results||[]).forEach(r=>{AT[r.pid||('env:'+r.kind)]=r});ASUM=id?'':(d.first?'✅ المساعد هيبدأ بـ: '+d.first:'❌ ولا مزوّد اشتغل. راجع المفاتيح.');if(!id&&d.first)toast('التبديل شغّال ✅')}catch(e){toast(e.message)}draw()});
-let AM=[],AB=0;
-try{AM=JSON.parse(localStorage.getItem('cdce_ai')||'[]')}catch(e){AM=[]}
-const aiSave=()=>{try{localStorage.setItem('cdce_ai',JSON.stringify(AM.slice(-30)))}catch(e){}};
-const aiHtml=()=>(AM.map(m=>`<div class="w ${m.role=='user'?'me':''}"><div class="b">${esc(m.content)}</div></div>`).join('')+(AB?'<div class="w"><div class="b m">بيكتب...</div></div>':''))||'<p class="m" style="text-align:center;margin-top:30px">اسألني أي حاجة 👋<br>بتبدّل تلقائياً بين أكتر من نموذج.</p>';
-const ai=()=>`<div class="ch"><div class="av">🤖</div><div class="grow"><b>المساعد الذكي</b><div class="m">ممكن يغلط، راجع المعلومات المهمة</div></div><button class="ib" onclick="aiClear()">🗑️</button></div><div class="msgs" id="am">${aiHtml()}</div><div class="cmp"><input id="aq" placeholder="اسأل المساعد..." onkeydown="if(event.key=='Enter')aiSend()" autocomplete="off"><button class="ib sd" onclick="aiSend()">➤</button></div>`;
-const aiDraw=()=>{const e=$('#am');if(!e)return;e.innerHTML=aiHtml();e.scrollTop=e.scrollHeight};
-const aiClear=()=>{if(confirm('مسح المحادثة؟')){AM=[];aiSave();aiDraw()}};
-const aiSend=async()=>{const i=$('#aq'),t=i.value.trim();if(!t||AB)return;i.value='';AM.push({role:'user',content:t});AB=1;aiDraw();
- try{const{data,error}=await sb.functions.invoke('ai-chat2',{body:{messages:AM.filter(m=>!m.err).slice(-12).map(m=>({role:m.role,content:m.content}))}});
-  if(error){let m='مش قادر أرد دلوقتي. جرّب بعد شوية.';try{const j=await error.context.json();if(j.error)m=j.error}catch(e){}throw new Error(m)}
-  AM.push({role:'assistant',content:data.reply})}catch(e){AM.push({role:'assistant',content:'⚠️ '+(e.message||'حصل خطأ'),err:1})}
- AB=0;aiSave();if($('#am'))aiDraw()};
+let AC=null,CH=[],CM=[],MODE='fast',WEB=false,SOC=false,SBO=false,AB2=false,AOK=false;
+const AG='#22c55e';
+const tfmt=t=>new Date(t).toLocaleString('ar-EG',{weekday:'short',hour:'2-digit',minute:'2-digit',day:'numeric',month:'short'});
+const mdh=s=>esc(s).replace(/\n/g,'<br>');
+const aiLoadCH=async()=>{try{CH=await q(sb.from('ai_chats').select('id,title,updated_at').order('updated_at',{ascending:false}))}catch(e){CH=[]}};
+const aiOpen=id=>run(async()=>{const r=await q(sb.from('ai_chats').select('*').eq('id',id).single());AC=r.id;CM=r.messages||[];SBO=false;draw()});
+const aiNew=()=>{AC=null;CM=[];SBO=false;draw()};
+const aiDelChat=id=>{if(!confirm('حذف المحادثة؟'))return;run(async()=>{await q(sb.from('ai_chats').delete().eq('id',id));if(AC==id){AC=null;CM=[]}await aiLoadCH();draw()})};
+const setMode=m=>{MODE=m;draw()};
+const aiSaveChat=async()=>{const msgs=CM.slice(-60);try{if(!AC){const f=CM.find(m=>m.role=='user');const r=await q(sb.from('ai_chats').insert({title:(f?f.content:'محادثة جديدة').slice(0,40),messages:msgs}).select('id').single());AC=r.id}else await q(sb.from('ai_chats').update({messages:msgs,updated_at:new Date().toISOString()}).eq('id',AC));await aiLoadCH()}catch(e){toast('ما قدرتش أحفظ المحادثة')}};
+const aiSend=async()=>{const i=$('#aq'),t=(i&&i.value||'').trim();if(!t||AB2)return;if(i)i.value='';CM.push({role:'user',content:t,t:Date.now()});AB2=true;draw();
+ try{const d=await aiCall({messages:CM.slice(-14).map(m=>({role:m.role,content:m.content})),mode:MODE,web:WEB,social:SOC});CM.push({role:'assistant',content:d.reply,model:d.model,sources:d.sources||[],t:Date.now()})}
+ catch(e){CM.push({role:'assistant',content:'⚠️ '+(e.message||'حصل خطأ'),err:1,t:Date.now()})}
+ AB2=false;await aiSaveChat();draw()};
+const aiMsg=m=>{const me=m.role=='user';
+ const src=(m.sources||[]).length?`<div style="margin-top:8px;font-size:12px">${m.sources.map((s,i)=>`<div style="margin:3px 0"><a href="${esc(s.url)}" target="_blank" style="color:${AG}">[${i+1}] ${esc(s.title||s.url)}</a></div>`).join('')}</div>`:'';
+ return `<div style="display:flex;justify-content:${me?'flex-end':'flex-start'};margin:10px 0"><div style="max-width:88%;padding:10px 12px;border-radius:14px;background:${me?'#14532d':'#111a14'};border:1px solid ${me?'#166534':'#1f2e23'}"><div style="line-height:1.8">${mdh(m.content)}</div>${src}<div style="font-size:11px;opacity:.6;margin-top:6px;text-align:${me?'start':'end'}">${m.model?esc(String(m.model).split(' · ')[0])+' • ':''}${m.t?tfmt(m.t):''}</div></div></div>`};
+const aiSide=()=>`<div onclick="SBO=false;draw()" style="position:absolute;inset:0;background:#000a;z-index:5"></div><div style="position:absolute;top:0;bottom:0;right:0;width:78%;max-width:300px;background:#07110b;border-left:1px solid #1f2e23;z-index:6;padding:12px;overflow:auto"><button onclick="aiNew()" style="width:100%;padding:10px;border-radius:10px;background:${AG};color:#052e16;border:0;font-weight:700">➕ محادثة جديدة</button><div style="margin-top:10px">${CH.map(c=>`<div style="display:flex;gap:6px;align-items:center;padding:10px 4px;border-bottom:1px solid #1f2e23"><span onclick="aiOpen('${c.id}')" style="flex:1;cursor:pointer;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${esc(c.title)}</span><b onclick="aiDelChat('${c.id}')" style="cursor:pointer;color:#f87171">🗑️</b></div>`).join('')||'<p style="opacity:.6">مفيش محادثات لسه</p>'}</div></div>`;
+const ai=()=>{if(!AOK){AOK=true;aiLoadCH().then(()=>draw())}
+ const pill=(on,label,fn)=>`<button onclick="${fn}" style="padding:6px 10px;border-radius:999px;border:1px solid ${on?AG:'#2a3a2f'};background:${on?'#14532d':'transparent'};color:${on?'#bbf7d0':'#9ca3af'};font-size:13px">${label}</button>`;
+ return `<div style="position:relative;flex:1;min-height:0;display:flex;flex-direction:column;background:#0b0f0d;color:#e6f7ec">
+ <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid #1f2e23"><button onclick="SBO=!SBO;aiLoadCH().then(()=>draw())" style="background:none;border:0;color:${AG};font-size:22px">☰</button><b style="flex:1;color:${AG}">المساعد الذكي</b><button onclick="aiNew()" style="background:none;border:0;color:${AG};font-size:22px">＋</button></div>
+ ${SBO?aiSide():''}
+ <div id="am" style="flex:1;min-height:0;overflow-y:auto;padding:0 12px">${CM.length?CM.map(aiMsg).join(''):`<div style="text-align:center;margin-top:40px;opacity:.85"><div style="font-size:42px">🤖</div><p>اسألني أي حاجة. أقدر أفكّر بعمق، أو أجاوب بسرعة، أو أبحث في الإنترنت وأديك المصادر.</p><p style="font-size:12px;opacity:.6">${tfmt(Date.now())}</p></div>`}${AB2?'<div style="opacity:.7;margin:10px 0">بيفكّر...</div>':''}</div>
+ <div style="padding:8px 10px;border-top:1px solid #1f2e23;display:flex;gap:6px;flex-wrap:wrap">${pill(MODE=='fast','⚡ سريع',"setMode('fast')")}${pill(MODE=='deep','🧠 معمّق',"setMode('deep')")}${pill(WEB,'🌐 بحث ويب',"WEB=!WEB;draw()")}${pill(SOC,'💬 سوشيال',"SOC=!SOC;draw()")}</div>
+ <div style="display:flex;gap:8px;padding:10px;border-top:1px solid #1f2e23"><input id="aq" placeholder="اكتب سؤالك..." onkeydown="if(event.key=='Enter')aiSend()" autocomplete="off" style="flex:1;border-radius:22px;background:#111a14;border:1px solid #1f2e23;color:#e6f7ec;padding:10px 14px"><button onclick="aiSend()" style="width:44px;height:44px;border-radius:50%;border:0;background:${AG};color:#052e16;font-size:18px">➤</button></div></div>`};
 /* VIP */
 const loadPolls=async()=>{PL=await q(sb.from('polls').select('*').order('created_at',{ascending:false}));VT=await q(sb.from('poll_votes').select('*'))};
 const vip=()=>{if(n(ME)<2)return polls();const hb=`<div class="sub"${sub=='chat'?' style="padding:8px 12px;margin:0"':''}><button class="btn ${sub=='chat'?'':'o'}" onclick="sub='chat';openRoom('vip','VIP')">شات VIP</button><button class="btn ${sub=='polls'?'':'o'}" onclick="subP()">التصويتات</button></div>`;return hb+(sub=='chat'?chatBody('vip'):polls())};
