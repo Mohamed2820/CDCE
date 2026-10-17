@@ -19,10 +19,20 @@ jobs:
           echo '<!doctype html><html><body></body></html>' > app/www/index.html
           cd app
           npm init -y
-          npm i @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6
+          npm i @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6 @capacitor/push-notifications@6
           echo '{"appId":"com.cdce.team","appName":"CDCE","webDir":"www","server":{"url":"https://mohamed2820.github.io/CDCE/","androidScheme":"https"}}' > capacitor.config.json
           npx cap add android
-          sed -i 's#</manifest>#<uses-permission android:name="android.permission.RECORD_AUDIO" /><uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" /><uses-permission android:name="android.permission.CAMERA" /></manifest>#' android/app/src/main/AndroidManifest.xml
+          npx cap sync android
+          sed -i 's#</manifest>#<uses-permission android:name="android.permission.RECORD_AUDIO" /><uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" /><uses-permission android:name="android.permission.CAMERA" /><uses-permission android:name="android.permission.POST_NOTIFICATIONS" /></manifest>#' android/app/src/main/AndroidManifest.xml
+      - name: Add Firebase config
+        env:
+          GOOGLE_SERVICES: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -z "$GOOGLE_SERVICES" ]; then echo "Missing secret GOOGLE_SERVICES_JSON"; exit 1; fi
+          cd app
+          printf '%s' "$GOOGLE_SERVICES" > android/app/google-services.json
+          sed -i '0,/dependencies {/s//dependencies {\n        classpath "com.google.gms:google-services:4.4.2"/' android/build.gradle
+          echo "apply plugin: 'com.google.gms.google-services'" >> android/app/build.gradle
       - name: Build debug APK
         working-directory: app/android
         run: ./gradlew assembleDebug
