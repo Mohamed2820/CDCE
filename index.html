@@ -227,7 +227,7 @@ const curRoom=()=>V.t=='vip'?'vip':V.room;
 const isDm=r=>(r||'').startsWith('dm:');
 const other=r=>r.slice(3).split('_').find(x=>x!=ME.id);
 const dmRoom=id=>'dm:'+[ME.id,id].sort().join('_');
-const opn=id=>{const x=P.find(y=>y.id==id);if(x)openRoom(dmRoom(id),x.full_name,'pm')};
+const opn=id=>{if(ME&&id==ME.id)return openRoom(dmRoom(id),'الشات مع نفسي','pm');const x=P.find(y=>y.id==id);if(x)openRoom(dmRoom(id),x.full_name,'pm')};
 const ico={image:'🖼️ صورة',video:'🎞️ فيديو',audio:'🎤 رسالة صوتية',file:'📄 ملف',sticker:'💟 استيكر'};
 const prev=m=>m.deleted?'🚫 رسالة محذوفة':m.kind=='text'?(m.content||''):ico[m.kind]+(m.kind=='file'&&m.file_name?' '+m.file_name:'');
 function mBody(m){if(m.deleted)return `<i class="m">🚫 ${m.sender==ME.id?'حذفت هذه الرسالة':'تم حذف هذه الرسالة'}</i>`;
@@ -326,7 +326,7 @@ const openPm=()=>run(async()=>{await pmLoad();V={t:'pm'};draw()});
 function pml(){const qq=PMQ.trim(),ok=x=>!qq||x.full_name.includes(qq);
  const rc=DML.map(d=>({d,o:P.find(x=>x.id==other(d.room))})).filter(x=>x.o&&ok(x.o)).sort((a,b)=>b.d.last.id-a.d.last.id).map(({d,o})=>`<div class="card row" onclick="opn('${o.id}')">${av(o)}<div class="grow" style="min-width:0"><b>${esc(o.full_name)}</b><div class="m" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.last.sender==ME.id?'أنت: ':''}${esc(prev(d.last)).slice(0,40)}</div></div><div style="text-align:end"><div class="m">${tm(d.last.created_at)}</div>${d.un?`<span class="bg2">${d.un}</span>`:''}</div></div>`).join('');
  const all=DEP.concat([{id:null,name:'من غير قسم'}]).map(d=>{const l=P.filter(x=>!x.is_memorial&&x.id!=ME.id&&x.department_id==d.id&&ok(x));return l.length?`<div class="card"><div class="m">${esc(d.emoji||'')} ${esc(d.name)}</div>${l.map(x=>`<div class="row" style="padding:6px 0" onclick="opn('${x.id}')">${av(x)}<div class="grow"><b>${esc(x.full_name)}</b><div class="m">${RL(x)}</div></div>💬</div>`).join('')}</div>`:''}).join('');
- return (rc?`<h3>المحادثات</h3>${rc}`:'')+`<h3>كل الفريق</h3>`+(all||'<p class="m">مفيش نتائج.</p>')}
+ return `<div class="card row" onclick="opn('${ME.id}')"><div class="av">📝</div><div class="grow"><b>الشات مع نفسي</b><div class="m">ملاحظاتك وحاجاتك الخاصة</div></div></div>`+(rc?`<h3>المحادثات</h3>${rc}`:'')+`<h3>كل الفريق</h3>`+(all||'<p class="m">مفيش نتائج.</p>')}
 const pmv=()=>`<h2>🔒 الشات الخاص</h2><input id="pq" placeholder="🔍 دوّر على اسم..." value="${esc(PMQ)}" oninput="PMQ=this.value;$('#pl').innerHTML=pml()"><div id="pl">${pml()}</div>`;
 let AIADM=false,AP=[],AEV=[],AT={},AL=0,ASUM='',AMOD={},AMREQ={},AKB=[];
 const aiAdm=()=>sb.rpc('is_ai_admin').then(r=>{AIADM=!!r.data}).catch(()=>{});
