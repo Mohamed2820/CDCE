@@ -72,7 +72,7 @@ nav button b{display:block;font-size:20px;font-weight:400}nav button.on{color:va
 #vw{display:none;position:fixed;inset:0;background:#000;z-index:40;flex-direction:column;align-items:center;justify-content:center;gap:10px}#vw img{max-width:100%;max-height:82%}#vw a{color:#fff}
 .bg,.bg2{background:var(--r);color:#fff;border-radius:10px;font-size:10px;font-style:normal;padding:1px 6px}
 .bg{position:relative;top:-8px}.bg2{display:inline-block;font-size:12px}
-</style></head><body><div id="v"><div class="logo" style="margin-top:30vh">CDCE</div></div><nav id="nav" hidden></nav><div id="ld"></div><div id="tt"></div><div id="ov"></div><div id="sh"></div><div id="vw"></div>
+#nav[hidden]{display:none!important}</style></head><body><div id="v"><div class="logo" style="margin-top:30vh">CDCE</div></div><nav id="nav" hidden></nav><div id="ld"></div><div id="tt"></div><div id="ov"></div><div id="sh"></div><div id="vw"></div>
 <script>
 const sb=supabase.createClient('https://aagjiudjznizrlyeewiq.supabase.co','sb_publishable_u7_rlr8_3vWbKBwSg3G4cw_XElO6uQM');
 const RN={member:'ممبر',board:'بورد',assistant_head:'مساعد هيد',head:'هيد',leader:'ليدر'},RKS=Object.keys(RN),n=x=>RKS.indexOf(x.rank);
@@ -110,7 +110,7 @@ const reg=()=>run(async()=>{const name=$('#ln').value.trim(),ph=norm($('#lp').va
  const{data,error}=await sb.auth.signUp({email:mail(ph),password:pw,options:{data:{full_name:name,phone:ph,code,college:$('#lc').value,year:$('#ly').value,offer:$('#lo').value}}});if(error)throw error;
  if(!data.session){const r=await sb.auth.signInWithPassword({email:mail(ph),password:pw});if(r.error)throw r.error}
  const rec=genRec();try{await q(sb.rpc('set_recovery',{c:rec}));REC=rec}catch(e){}await boot()});
-const out=async()=>{try{await sb.rpc('release_session')}catch(e){}await sb.auth.signOut();ME=null;U=null;mode='in';boot()};
+const out=async()=>{try{await sb.rpc('release_session')}catch(e){}try{await sb.auth.signOut()}catch(e){}ME=null;U=null;mode='in';boot()};
 const newRec=()=>run(async()=>{const c=genRec();await q(sb.rpc('set_recovery',{c}));showRec(c)});
 const delMe=()=>{if(!confirm('هتحذف حسابك نهائياً وتتفك ارتباط كودك. متأكد؟'))return;run(async()=>{await q(sb.rpc('delete_my_account'));try{await sb.auth.signOut()}catch(e){}ME=null;U=null;mode='in';toast('اتحذف الحساب');login()})};
 setInterval(async()=>{if(!U)return;const{data,error}=await sb.rpc('ping_session',{sid:SID});if(!error&&data===false){await sb.auth.signOut();U=null;ME=null;toast('اتفتح الحساب من جهاز تاني');login()}},45000);
