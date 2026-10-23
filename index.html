@@ -113,7 +113,7 @@ const devPage=()=>{if(!ME)return '';if(DCS===null){loadDC();return '<div class="
  if(ME.is_developer)return `<h2>🛠️ المطور</h2><p class="m">الشكاوى الرسمية اللي الأعضاء بعتوها ليك.</p>${list||'<div class="card m">مفيش شكاوى لسه.</div>'}<button class="btn o" style="width:100%;margin-top:8px" onclick="tab('pm')">💬 الشات الخاص مع الأعضاء</button>`;
  return `<h2>🛠️ المطور</h2>`+(DEVP?`<div class="card"><button class="btn g" style="width:100%" onclick="openRoom(dmRoom('${DEVP.id}'),'المطور')">💬 مراسلة المطور</button></div>`:`<div class="card m">المطور لسه ما اتعملش.</div>`)+`<div class="card"><h3>📝 شكوى رسمية</h3><p class="m">الشكوى بتوصل للمطور بس، ويقدر يشوف حالتها.</p><textarea id="cmp" rows="4" placeholder="اكتب الشكوى..."></textarea><button class="btn g" style="width:100%;margin-top:6px" onclick="submitComplaint()">إرسال الشكوى</button></div>`+(list?`<h3>شكاويك</h3>${list}`:'')};
 let PD=null,QS=[],CQ=null;
-const pickD=id=>{$('#ld').value=id;document.querySelectorAll('.dchip').forEach(b=>{b.className='btn dchip'+(b.dataset.id==id?'':' o')})};
+const pickD=id=>{$('#ldept').value=id;document.querySelectorAll('.dchip').forEach(b=>{b.className='btn dchip'+(b.dataset.id==id?'':' o')})};
 const loadPD=async()=>{try{const{data}=await sb.rpc('public_departments');PD=data||[]}catch(e){PD=[]}if(mode=='up')login()};
 const askCode=()=>run(async()=>{const{data,error}=await sb.rpc('get_code_questions');if(error)throw error;QS=data||[];
  if(!QS.length)return toast('طلب الكود مش متاح دلوقتي. كلّم الليدر أو الهيد.');
@@ -126,7 +126,7 @@ const sendQ=i=>{const a=($('#qa').value||'').trim();if(!a)return toast('اكتب
 function login(){$('#nav').hidden=true;const up=mode=='up',fp=mode=='fp';if(up&&PD===null)loadPD();
  $('#v').innerHTML=`<div class="logo" style="margin:20px auto">CDCE</div><div class="card"><h2>${up?'حساب جديد':fp?'نسيت كلمة السر':'تسجيل الدخول'}</h2>
  ${up?'<input id="lk" placeholder="كود الدعوة (من الليدر)"><input id="ln" placeholder="الاسم">':''}${fp?'<input id="lk" placeholder="كود الاسترجاع بتاعك">':''}<input id="lp" type="tel" placeholder="رقم التليفون"><input id="lw" type="password" placeholder="${fp?'كلمة السر الجديدة':'كلمة السر (6 حروف على الأقل)'}">
- ${up?`<input id="lc" placeholder="الكلية"><input id="ly" placeholder="الفرقة (أو متخرج)"><input id="lo" placeholder="تقدر تقدم إيه للفريق؟"><div class="m" style="margin-top:10px;font-weight:700">اختار قسمك / لجنتك</div><input id="ld" type="hidden">${(PD&&PD.length)?`<div style="display:flex;flex-wrap:wrap;gap:8px;margin:8px 0">${PD.map(d=>`<button type="button" class="btn o dchip" data-id="${d.id}" style="flex:1 1 40%" onclick="pickD('${d.id}')">${esc(((d.emoji||'')+' '+d.name).trim())}</button>`).join('')}</div>`:(PD===null?`<div class="m">بيحمّل الأقسام...</div>`:`<div class="m" style="color:#ef4444" onclick="PD=null;login()">مقدرناش نحمّل الأقسام. اضغط هنا للمحاولة تاني</div>`)}`:''}
+ ${up?`<input id="lc" placeholder="الكلية"><input id="ly" placeholder="الفرقة (أو متخرج)"><input id="lo" placeholder="تقدر تقدم إيه للفريق؟"><div class="m" style="margin-top:10px;font-weight:700">اختار قسمك / لجنتك</div><input id="ldept" type="hidden">${(PD&&PD.length)?`<div style="display:flex;flex-wrap:wrap;gap:8px;margin:8px 0">${PD.map(d=>`<button type="button" class="btn o dchip" data-id="${d.id}" style="flex:1 1 40%" onclick="pickD('${d.id}')">${esc(((d.emoji||'')+' '+d.name).trim())}</button>`).join('')}</div>`:(PD===null?`<div class="m">بيحمّل الأقسام...</div>`:`<div class="m" style="color:#ef4444" onclick="PD=null;login()">مقدرناش نحمّل الأقسام. اضغط هنا للمحاولة تاني</div>`)}`:''}
  <button class="btn" style="width:100%" onclick="${up?'reg()':fp?'resetRec()':'logIn()'}">${up?'إنشاء الحساب':fp?'تغيير كلمة السر':'دخول'}</button>
  ${up?'<p class="m" style="text-align:center;color:var(--g,#16a34a);font-weight:700" onclick="askCode()">🔑 مش معاك كود؟ اطلب كود دعوة</p>':''}
  ${fp?'<p class="m" style="text-align:center" onclick="reqReset()">ضيّعت الكود؟ ابعت طلب للليدر أو الهيد</p>':''}
@@ -143,7 +143,7 @@ const resetRec=()=>run(async()=>{const ph=norm($('#lp').value),c=$('#lk').value.
 const reg=()=>run(async()=>{const name=$('#ln').value.trim(),ph=norm($('#lp').value),pw=$('#lw').value,code=$('#lk').value.trim().toUpperCase();
  if(!code||!name||ph.length<8||pw.length<6)return toast('كمّل البيانات: الكود والاسم وتليفون صحيح وكلمة سر 6 حروف على الأقل');
  const ck=await q(sb.rpc('check_code',{c:code}));if(!ck)return toast('الكود غلط أو اتستخدم قبل كده');
- const dept=$('#ld')?$('#ld').value:'';if(!ck.dept&&ck.rank!='leader'&&!dept)return toast('اختار قسمك / لجنتك الأول');
+ const dept=$('#ldept')?$('#ldept').value:'';if(!ck.dept&&ck.rank!='leader'&&!dept)return toast('اختار قسمك / لجنتك الأول');
  const{data,error}=await sb.auth.signUp({email:mail(ph),password:pw,options:{data:{full_name:name,phone:ph,code,dept,college:$('#lc').value,year:$('#ly').value,offer:$('#lo').value}}});if(error)throw error;
  if(!data.session){const r=await sb.auth.signInWithPassword({email:mail(ph),password:pw});if(r.error)throw r.error}
  const rec=genRec();try{await q(sb.rpc('set_recovery',{c:rec}));REC=rec}catch(e){}await boot()});
