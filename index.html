@@ -112,11 +112,22 @@ const devPage=()=>{if(!ME)return '';if(DCS===null){loadDC();return '<div class="
  const list=(DCS||[]).map(c=>{const sn=(P.find(x=>x.id==c.sender)||{}).full_name||'عضو';return `<div class="card"><div class="row"><b class="grow">${esc(sn)}</b><span class="m">${stLbl(c.status)}</span></div><div style="white-space:pre-wrap;margin-top:6px">${esc(c.body)}</div>${ME.is_developer?`<div class="row" style="gap:6px;margin-top:8px"><button class="btn o" onclick="setDC('${c.id}','seen')">👀 اتشافت</button><button class="btn g" onclick="setDC('${c.id}','done')">✅ اتحلّت</button></div>`:''}</div>`}).join('');
  if(ME.is_developer)return `<h2>🛠️ المطور</h2><p class="m">الشكاوى الرسمية اللي الأعضاء بعتوها ليك.</p>${list||'<div class="card m">مفيش شكاوى لسه.</div>'}<button class="btn o" style="width:100%;margin-top:8px" onclick="tab('pm')">💬 الشات الخاص مع الأعضاء</button>`;
  return `<h2>🛠️ المطور</h2>`+(DEVP?`<div class="card"><button class="btn g" style="width:100%" onclick="openRoom(dmRoom('${DEVP.id}'),'المطور')">💬 مراسلة المطور</button></div>`:`<div class="card m">المطور لسه ما اتعملش.</div>`)+`<div class="card"><h3>📝 شكوى رسمية</h3><p class="m">الشكوى بتوصل للمطور بس، ويقدر يشوف حالتها.</p><textarea id="cmp" rows="4" placeholder="اكتب الشكوى..."></textarea><button class="btn g" style="width:100%;margin-top:6px" onclick="submitComplaint()">إرسال الشكوى</button></div>`+(list?`<h3>شكاويك</h3>${list}`:'')};
-function login(){$('#nav').hidden=true;const up=mode=='up',fp=mode=='fp';
+let PD=null,QS=[],CQ=null;
+const loadPD=async()=>{try{const{data}=await sb.rpc('public_departments');PD=data||[]}catch(e){PD=[]}if(mode=='up')login()};
+const askCode=()=>run(async()=>{const{data,error}=await sb.rpc('get_code_questions');if(error)throw error;QS=data||[];
+ if(!QS.length)return toast('طلب الكود مش متاح دلوقتي. كلّم الليدر أو الهيد.');
+ sheet('<h3>🔑 اطلب كود الدعوة</h3><p class="m">اختار رتبتك، وجاوب على السؤال.</p>'+QS.map((x,i)=>`<button class="it" onclick="pickQ(${i})">${esc(x.rank_name)}</button>`).join(''))});
+const pickQ=i=>{const x=QS[i];sheet(`<h3>${esc(x.rank_name)}</h3><p style="margin:8px 0;white-space:pre-wrap">${esc(x.question)}</p><input id="qa" placeholder="اكتب الإجابة"><button class="btn g" style="width:100%;margin-top:8px" onclick="sendQ(${i})">تأكيد</button>`)};
+const sendQ=i=>{const a=($('#qa').value||'').trim();if(!a)return toast('اكتب الإجابة');run(async()=>{const{data,error}=await sb.rpc('request_invite',{p_id:QS[i].id,p_answer:a});if(error)throw error;
+ if(!data||!data.ok)return toast(data&&data.err=='locked'?'محاولات غلط كتير. استنى شوية وجرّب تاني':data&&data.err=='no_question'?'السؤال ده اتغيّر. افتح الطلب تاني':'الإجابة غلط');
+ const c=data.code;closeSh();const k=$('#lk');if(k)k.value=c;
+ sheet(`<h3>✅ كود الدعوة بتاعك</h3><div style="font-size:26px;font-weight:800;letter-spacing:3px;margin:12px 0;direction:ltr;text-align:center">${c}</div><p class="m">اتحط في خانة الكود. كمّل بياناتك واختار قسمك. الكود يستخدم مرة واحدة.</p><button class="btn o" style="width:100%" onclick="try{navigator.clipboard.writeText('${c}');toast('اتنسخ')}catch(e){}">نسخ</button>`)})};
+function login(){$('#nav').hidden=true;const up=mode=='up',fp=mode=='fp';if(up&&PD===null)loadPD();
  $('#v').innerHTML=`<div class="logo" style="margin:20px auto">CDCE</div><div class="card"><h2>${up?'حساب جديد':fp?'نسيت كلمة السر':'تسجيل الدخول'}</h2>
  ${up?'<input id="lk" placeholder="كود الدعوة (من الليدر)"><input id="ln" placeholder="الاسم">':''}${fp?'<input id="lk" placeholder="كود الاسترجاع بتاعك">':''}<input id="lp" type="tel" placeholder="رقم التليفون"><input id="lw" type="password" placeholder="${fp?'كلمة السر الجديدة':'كلمة السر (6 حروف على الأقل)'}">
- ${up?'<input id="lc" placeholder="الكلية"><input id="ly" placeholder="الفرقة (أو متخرج)"><input id="lo" placeholder="تقدر تقدم إيه للفريق؟">':''}
+ ${up?`<input id="lc" placeholder="الكلية"><input id="ly" placeholder="الفرقة (أو متخرج)"><input id="lo" placeholder="تقدر تقدم إيه للفريق؟"><select id="ld"><option value="">اختار قسمك / لجنتك</option>${(PD||[]).map(d=>`<option value="${d.id}">${esc(((d.emoji||'')+' '+d.name).trim())}</option>`).join('')}</select>`:''}
  <button class="btn" style="width:100%" onclick="${up?'reg()':fp?'resetRec()':'logIn()'}">${up?'إنشاء الحساب':fp?'تغيير كلمة السر':'دخول'}</button>
+ ${up?'<p class="m" style="text-align:center;color:var(--g,#16a34a);font-weight:700" onclick="askCode()">🔑 مش معاك كود؟ اطلب كود دعوة</p>':''}
  ${fp?'<p class="m" style="text-align:center" onclick="reqReset()">ضيّعت الكود؟ ابعت طلب للليدر أو الهيد</p>':''}
  <p class="m" style="text-align:center" onclick="mode='${up||fp?'in':'up'}';login()">${up||fp?'رجوع لتسجيل الدخول':'مفيش حساب؟ أنشئ حساب بكود الدعوة'}</p>
  ${mode=='in'?'<p class="m" style="text-align:center" onclick="mode=\'fp\';login()">نسيت كلمة السر؟</p>':''}</div>`}
@@ -130,8 +141,9 @@ const resetRec=()=>run(async()=>{const ph=norm($('#lp').value),c=$('#lk').value.
  if(!await q(sb.rpc('reset_with_recovery',{p:ph,c,newpw:pw})))return toast('الرقم أو كود الاسترجاع غلط');toast('اتغيرت كلمة السر ✅ سجّل دخول');mode='in';login()});
 const reg=()=>run(async()=>{const name=$('#ln').value.trim(),ph=norm($('#lp').value),pw=$('#lw').value,code=$('#lk').value.trim().toUpperCase();
  if(!code||!name||ph.length<8||pw.length<6)return toast('كمّل البيانات: الكود والاسم وتليفون صحيح وكلمة سر 6 حروف على الأقل');
- if(!await q(sb.rpc('check_code',{c:code})))return toast('الكود غلط أو اتستخدم قبل كده');
- const{data,error}=await sb.auth.signUp({email:mail(ph),password:pw,options:{data:{full_name:name,phone:ph,code,college:$('#lc').value,year:$('#ly').value,offer:$('#lo').value}}});if(error)throw error;
+ const ck=await q(sb.rpc('check_code',{c:code}));if(!ck)return toast('الكود غلط أو اتستخدم قبل كده');
+ const dept=$('#ld')?$('#ld').value:'';if(!ck.dept&&ck.rank!='leader'&&!dept)return toast('اختار قسمك / لجنتك الأول');
+ const{data,error}=await sb.auth.signUp({email:mail(ph),password:pw,options:{data:{full_name:name,phone:ph,code,dept,college:$('#lc').value,year:$('#ly').value,offer:$('#lo').value}}});if(error)throw error;
  if(!data.session){const r=await sb.auth.signInWithPassword({email:mail(ph),password:pw});if(r.error)throw r.error}
  const rec=genRec();try{await q(sb.rpc('set_recovery',{c:rec}));REC=rec}catch(e){}await boot()});
 const out=async()=>{try{await sb.rpc('release_session')}catch(e){}try{await sb.auth.signOut()}catch(e){}ME=null;U=null;mode='in';boot()};
@@ -418,9 +430,9 @@ const openMe=()=>run(async()=>{const r=await q(sb.from('messages').select('room'
 const openStg=()=>run(async()=>{RES=n(ME)>=3?await q(sb.rpc('list_resets')):[];CODES=ME.rank=='leader'?await q(sb.from('invite_codes').select('*').order('created_at',{ascending:false})):[];V={t:'settings'};draw()});
 const mine=()=>pbody(ME)+`<div class="card"><h3>محادثاتي الخاصة</h3>${DMS.map(r=>{const o=r.slice(3).split('_').find(x=>x!=ME.id);return `<div class="row" style="padding:6px 0" onclick="openRoom('${r}','${esc(nameBy(o))}','me')">💬 <b>${esc(nameBy(o))}</b></div>`}).join('')||'<p class="m">مفيش محادثات خاصة لسه.</p>'}</div><p class="m" style="text-align:center">لتعديل بياناتك افتح ⚙️ الإعدادات</p>`;
 let ss='me',sm=null,ec=null;
-const SS=[['me','👤 بياناتي'],['aik','🤖 الذكاء','A'],['mem','👥 الأعضاء',3],['dep','🗂️ الأقسام',2],['team','📝 الفريق',3],['codes','🔑 الأكواد','L'],['rst','🔐 الطلبات',3]];
+const SS=[['me','👤 بياناتي'],['aik','🤖 الذكاء','A'],['mem','👥 الأعضاء',3],['dep','🗂️ الأقسام',2],['team','📝 الفريق',3],['codes','🔑 الأكواد','L'],['cq','❓ أسئلة الكود',3],['rst','🔐 الطلبات',3]];
 function stg(){const m=n(ME),t=SS.filter(x=>x[2]===undefined||(x[2]=='A'?AIADM:x[2]=='L'?ME.rank=='leader':m>=x[2]));if(!t.some(x=>x[0]==ss))ss='me';
- return `<h2>⚙️ الإعدادات</h2><div class="sub" style="overflow-x:auto">${t.map(x=>`<button class="btn ${ss==x[0]?'':'o'}" style="flex:none" onclick="ss='${x[0]}';sm=null;ec=null;draw()">${x[1]}</button>`).join('')}</div>`+({me:sMe,aik:sAik,mem:sMem,dep:sDep,team:sTeam,codes:sCodes,rst:sRst}[ss])()}
+ return `<h2>⚙️ الإعدادات</h2><div class="sub" style="overflow-x:auto">${t.map(x=>`<button class="btn ${ss==x[0]?'':'o'}" style="flex:none" onclick="ss='${x[0]}';sm=null;ec=null;draw()">${x[1]}</button>`).join('')}</div>`+({me:sMe,aik:sAik,mem:sMem,dep:sDep,team:sTeam,codes:sCodes,cq:sCq,rst:sRst}[ss])()}
 const sMe=()=>`<div class="card" style="text-align:center">${av(ME,'big')}<p class="m">${esc(ME.full_name)}</p>
  <label class="btn" style="display:block;margin:6px 0">🖼️ اختيار صورة من المعرض<input type="file" accept="image/*" hidden onchange="myAv(this.files[0])"></label>
  <label class="btn o" style="display:block">📷 التقاط صورة بالكاميرا<input type="file" accept="image/*" capture="user" hidden onchange="myAv(this.files[0])"></label></div>
@@ -463,6 +475,15 @@ const sCodes=()=>`<div class="card"><h3>إنشاء كود</h3><select id="cr">${
 const mkCode=()=>run(async()=>{const c=await q(sb.rpc('make_code',{r:$('#cr').value,d:$('#cd').value,lbl:$('#cl').value||null}));toast('الكود: '+c);await openStg()});
 const saveCode=c=>run(async()=>{await q(sb.from('invite_codes').update({rank:$('#xr').value,department_id:$('#xd').value,label:$('#xl').value||null}).eq('code',c));ec=null;await openStg()});
 const delCode=c=>{if(!confirm('حذف الكود '+c+'؟'))return;run(async()=>{await q(sb.from('invite_codes').delete().eq('code',c));await openStg()})};
+
+const cqSlots=()=>{const o=[];['member','board','assistant_head','head'].forEach(k=>o.push({rank:k,rd:null,name:RN[k]}));(RD||[]).forEach(d=>o.push({rank:d.base,rd:d.id,name:d.name}));return o.sort((a,b)=>RKS.indexOf(a.rank)-RKS.indexOf(b.rank))};
+const loadCQ=async()=>{try{CQ=await q(sb.rpc('list_code_questions'))}catch(e){CQ=[]}draw()};
+const cqFind=s=>(CQ||[]).find(x=>x.rank==s.rank&&(x.rank_def||null)==(s.rd||null));
+let CQS=[];
+const sCq=()=>{if(CQ===null){loadCQ();return '<div class="card m">بيحمّل...</div>'}CQS=cqSlots();
+ return '<div class="card"><h3>❓ أسئلة طلب الكود</h3><p class="m">لكل رتبة سؤال وإجابة. الشخص اللي يجاوب صح بياخد كود دعوة بالرتبة دي. الإجابة مش بتظهر هنا، اكتب إجابة جديدة بس لو عايز تغيّرها. الأرقام والتشكيل والهمزات مش بتفرق.</p></div>'+CQS.map((s,i)=>{const c=cqFind(s);return `<div class="card"><div class="row"><b class="grow">${esc(s.name)}</b><span class="tag">${c?'✅ متفعّل':'مفيش سؤال'}</span></div><input id="cqq_${i}" placeholder="السؤال" value="${esc(c?c.question:'')}"><input id="cqa_${i}" placeholder="${c?'إجابة جديدة (سيبها فاضية لو مش عايز تغيّرها)':'الإجابة'}"><div class="row" style="gap:6px"><button class="btn g grow" onclick="saveCq(${i})">حفظ</button>${c?`<button class="btn r" onclick="delCq('${c.id}')">حذف</button>`:''}</div></div>`}).join('')};
+const saveCq=i=>{const s=CQS[i],qq=($('#cqq_'+i).value||'').trim(),a=($('#cqa_'+i).value||'').trim();if(!cqFind(s)&&(!qq||!a))return toast('اكتب السؤال والإجابة');run(async()=>{await q(sb.rpc('save_code_question',{p_rank:s.rank,p_rank_def:s.rd,p_question:qq||null,p_answer:a||null}));toast('اتحفظ ✅');CQ=null;draw()})};
+const delCq=id=>{if(!confirm('حذف السؤال ده؟ الرتبة دي مش هتقدر تطلب كود.'))return;run(async()=>{await q(sb.rpc('delete_code_question',{p_id:id}));CQ=null;draw()})};
 const sRst=()=>`<div class="card"><h3>طلبات نسيان كلمة السر</h3>${RES.map(r=>`<div class="memo"><b>${esc(r.full_name)}</b> <span class="tag">${RL(r)}</span><input id="rp_${r.id}" placeholder="كلمة سر مؤقتة (6+)"><button class="btn g" onclick="doReset('${r.id}')">تعيين</button></div>`).join('')||'<p class="m">مفيش طلبات.</p>'}</div>`;
 const doReset=id=>run(async()=>{await q(sb.rpc('admin_reset',{req:id,newpw:$('#rp_'+id).value}));toast('اتعيّنت كلمة السر المؤقتة ✅');await openStg()});
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
