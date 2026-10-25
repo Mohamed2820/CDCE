@@ -230,6 +230,11 @@ function prof(){const x=P.find(y=>y.id==V.id);if(!x)return'';
  (!x.is_memorial&&x.id!=ME.id?`<button class="btn" style="width:100%;margin-bottom:10px" onclick="openRoom('dm:'+[ME.id,'${x.id}'].sort().join('_'),'${esc(x.full_name)}','prof:${x.id}')">💬 مراسلة خاصة</button>`:'')}
 /* chat */
 const MAXM=52428800,MAXS=52428800;
+const UC_KEY='9faab03e3a9afc481141',UC_CDN='https://ucarecdn.com/',UC_TH='-/preview/480x480/-/format/auto/-/quality/smart/',UC_FULL='-/preview/1600x1600/-/format/auto/-/quality/smart/';
+const isUrl=p=>/^https?:/.test(p||'');
+const ucUp=async b=>{const fd=new FormData();fd.append('UPLOADCARE_PUB_KEY',UC_KEY);fd.append('UPLOADCARE_STORE','1');fd.append('file',b,'img.jpg');
+ const r=await fetch('https://upload.uploadcare.com/base/',{method:'POST',body:fd});if(!r.ok)throw new Error('رفع الصورة فشل ('+r.status+')');
+ const j=await r.json();if(!j.file)throw new Error('رفع الصورة فشل');return UC_CDN+j.file+'/'};
 let RPL=null,EDT=null,RDm={},MU={},STK=[],STE=0,REC2=null,DMU=0,DML=[],PMQ='',LP=null,FW=null;
 const CK=['#e67e22','#9b59b6','#16a085','#c0392b','#2980b9','#d35400','#8e44ad','#27ae60'];
 const nc=id=>CK[[...String(id)].reduce((a,c)=>a+c.charCodeAt(0),0)%CK.length];
@@ -245,7 +250,7 @@ const ico={image:'🖼️ صورة',video:'🎞️ فيديو',audio:'🎤 رس�
 const prev=m=>m.deleted?'🚫 رسالة محذوفة':m.kind=='text'?(m.content||''):ico[m.kind]+(m.kind=='file'&&m.file_name?' '+m.file_name:'');
 function mBody(m){if(m.deleted)return `<i class="m">🚫 ${m.sender==ME.id?'حذفت هذه الرسالة':'تم حذف هذه الرسالة'}</i>`;
  const p=esc(m.media_url||'');
- if(m.kind=='image')return `<img class="mi" data-p="${p}" onclick="view('${p}')">`;
+ if(m.kind=='image')return isUrl(m.media_url)?`<img class="mi" src="${p}${UC_TH}" loading="lazy" onclick="view('${p}')">`:`<img class="mi" data-p="${p}" onclick="view('${p}')">`;
  if(m.kind=='video')return `<video class="mi" data-p="${p}" preload="metadata" controls playsinline></video>`;
  if(m.kind=='audio')return `<div class="au"><button onclick="pa(this)">▶</button><input type="range" value="0" max="100" oninput="sk(this)"><span>${fmt(m.dur||0)}</span><audio data-p="${p}" data-d="${m.dur||1}" preload="none"></audio></div>`;
  if(m.kind=='file')return `<div class="fl" onclick="openF('${p}')">📄 <span>${esc(m.file_name||'ملف')}</span></div>`;
@@ -261,9 +266,9 @@ const msHtml=()=>MS.map(mHtml).join('')||'<p class="m" style="text-align:center;
 const paintMs=f=>{const e=$('#ms');if(!e)return;if(!f&&[...document.querySelectorAll('audio')].some(a=>!a.paused))return;const bt=f||e.scrollHeight-e.scrollTop-e.clientHeight<140;e.innerHTML=msHtml();if(bt)e.scrollTop=e.scrollHeight;hyd()};
 const upd=m=>{const i=MS.findIndex(x=>x.id==m.id);if(i<0)MS.push(m);else MS[i]=m};
 const own=m=>{if(MS.some(x=>x.id==m.id))return;MS.push(m);const e=$('#ms');if(!e)return;if(MS.length==1)return paintMs(1);const bt=m.sender==ME.id||e.scrollHeight-e.scrollTop-e.clientHeight<140;e.insertAdjacentHTML('beforeend',mHtml(m,MS.length-1));if(bt)e.scrollTop=e.scrollHeight;hyd()};
-const sgn=async p=>{const c=MU[p];if(c&&Date.now()-c.t<3e6)return c.u;const r=await sb.storage.from('chat-media').createSignedUrl(p,3600),u=r.data?r.data.signedUrl:'x';MU[p]={u,t:Date.now()};return u};
+const sgn=async p=>{if(isUrl(p))return p;const c=MU[p];if(c&&Date.now()-c.t<3e6)return c.u;const r=await sb.storage.from('chat-media').createSignedUrl(p,3600),u=r.data?r.data.signedUrl:'x';MU[p]={u,t:Date.now()};return u};
 async function hyd(){for(const e of document.querySelectorAll('[data-p]')){const p=e.dataset.p;e.removeAttribute('data-p');if(!p)continue;const u=await sgn(p);if(u!='x')e.src=u}}
-const view=async p=>{const u=await sgn(p),v=$('#vw');v.innerHTML=`<img src="${u}"><a href="${u}" download onclick="event.stopPropagation()">⬇️ تحميل</a><span class="m">اضغط في أي مكان للإغلاق</span>`;v.style.display='flex';v.onclick=()=>v.style.display='none'};
+const view=async p=>{const u=await sgn(p),v=$('#vw'),fu=isUrl(p)?p+UC_FULL:u;v.innerHTML=`<img src="${fu}"><a href="${u}" download target="_blank" onclick="event.stopPropagation()">⬇️ تحميل</a><span class="m">اضغط في أي مكان للإغلاق</span>`;v.style.display='flex';v.onclick=()=>v.style.display='none'};
 const openF=async p=>{const u=await sgn(p);window.open(u,'_blank')};
 async function pa(b){const w=b.parentNode,a=w.querySelector('audio'),r=w.querySelector('input');for(let i=0;i<20&&!a.getAttribute('src');i++)await new Promise(s=>setTimeout(s,100));
  if(a.paused){document.querySelectorAll('audio').forEach(x=>{if(x!==a)x.pause()});a.ontimeupdate=()=>{r.value=Math.min(100,a.currentTime/(+a.dataset.d||1)*100)};a.onended=()=>{b.textContent='▶';r.value=0};a.onpause=()=>{b.textContent='▶'};a.onplay=()=>{b.textContent='⏸'};a.play().catch(()=>toast('مش قادر يشغّل الصوت'))}else a.pause()}
@@ -276,7 +281,7 @@ function msgMenu(id){const m=MS.find(x=>x.id==id);if(!m||m.deleted)return;const 
 const reply=id=>{RPL=MS.find(x=>x.id==id);EDT=null;rb();const i=$('#mi');if(i)i.focus()};
 const cp=id=>{const m=MS.find(x=>x.id==id);try{navigator.clipboard.writeText(m.content);toast('اتنسخت')}catch(e){}};
 const edt=id=>{const m=MS.find(x=>x.id==id);EDT=id;RPL=null;rb();const i=$('#mi');i.value=m.content;tg();i.focus()};
-const dlm=id=>{if(!confirm('حذف الرسالة للجميع؟'))return;run(async()=>{const m=MS.find(x=>x.id==id),p=['image','video','audio','file'].includes(m.kind)?m.media_url:null;const r=await q(sb.from('messages').update({deleted:true}).eq('id',id).select().single());if(p)try{await sb.storage.from('chat-media').remove([p])}catch(e){}upd(r);paintMs(1)})};
+const dlm=id=>{if(!confirm('حذف الرسالة للجميع؟'))return;run(async()=>{const m=MS.find(x=>x.id==id),p=['image','video','audio','file'].includes(m.kind)?m.media_url:null;const r=await q(sb.from('messages').update({deleted:true}).eq('id',id).select().single());if(p&&!isUrl(p))try{await sb.storage.from('chat-media').remove([p])}catch(e){}upd(r);paintMs(1)})};
 const jump=id=>{const e=$('#m'+id);if(e){e.scrollIntoView({block:'center'});e.classList.add('hl');setTimeout(()=>e.classList.remove('hl'),1200)}};
 const rb=()=>{const e=$('#rb');if(!e)return;const c=RPL?nc(RPL.sender):'';e.innerHTML=EDT?`<div class="rbx"><div class="grow">✏️ تعديل الرسالة</div><b onclick="EDT=null;$('#mi').value='';tg();rb()">✕</b></div>`:RPL?`<div class="rbx" style="border-color:${c}"><div class="grow"><b style="color:${c}">${RPL.sender==ME.id?'أنت':esc(nameBy(RPL.sender))}</b><div class="m">${esc(prev(RPL)).slice(0,60)}</div></div><b onclick="RPL=null;rb()">✕</b></div>`:'';e.style.display=e.innerHTML?'block':'none'};
 const tg=()=>{const t=$('#mi').value.trim();$('#bs').style.display=t?'':'none';$('#bm').style.display=t?'none':''};
@@ -299,10 +304,10 @@ const sendM=()=>{const i=$('#mi'),t=i.value.trim();if(!t)return;i.value='';tg();
  const rp=RPL?RPL.id:null;RPL=null;rb();run(async()=>{own(await q(sb.from('messages').insert({room:curRoom(),content:t,reply_to:rp}).select().single()))})};
 /* media */
 const sendMedia=(b,kind,ext,name,dur)=>{const room=curRoom(),path=room.replace(/:/g,'__')+'/'+crypto.randomUUID()+'.'+ext,rp=RPL?RPL.id:null;RPL=null;rb();
- run(async()=>{const{error}=await sb.storage.from('chat-media').upload(path,b,{contentType:(b.type||'application/octet-stream').split(';')[0]});if(error)throw error;
- own(await q(sb.from('messages').insert({room,kind,media_url:path,file_name:name||null,dur:dur||null,reply_to:rp}).select().single()))})};
+ run(async()=>{let mu=path;if(kind=='image'){mu=await ucUp(b)}else{const{error}=await sb.storage.from('chat-media').upload(path,b,{contentType:(b.type||'application/octet-stream').split(';')[0]});if(error)throw error}
+ own(await q(sb.from('messages').insert({room,kind,media_url:mu,file_name:name||null,dur:dur||null,reply_to:rp}).select().single()))})};
 const pick=(f,k)=>{closeSh();if(!f)return;if(f.size>MAXM)return toast('الحجم أكبر من 50 ميجا (أقصى حد في Supabase المجاني)');const ext=((f.name.split('.').pop()||'bin').toLowerCase().replace(/[^a-z0-9]/g,'').slice(0,5))||'bin';
- if(k=='image'){if(f.size<=4e6&&/^image\/(jpeg|png|gif|webp)$/.test(f.type))sendMedia(f,'image',f.type.split('/')[1].replace('jpeg','jpg'));else rs(f,1600,b=>sendMedia(b,'image','jpg'))}else sendMedia(f,k,ext,f.name)};
+ if(k=='image'){if(f.type=='image/gif'&&f.size<=3e6)sendMedia(f,'image','gif');else rs(f,1280,b=>sendMedia(b,'image','jpg'))}else sendMedia(f,k,ext,f.name)};
 const attach=()=>sheet(`<label class="it">🖼️ صورة من المعرض<input type="file" accept="image/*" hidden onchange="pick(this.files[0],'image')"></label><label class="it">🎞️ فيديو من المعرض<input type="file" accept="video/*" hidden onchange="pick(this.files[0],'video')"></label><label class="it">📷 كاميرا (صورة)<input type="file" accept="image/*" capture="environment" hidden onchange="pick(this.files[0],'image')"></label><label class="it">🎥 كاميرا (فيديو)<input type="file" accept="video/*" capture="environment" hidden onchange="pick(this.files[0],'video')"></label><label class="it">📄 ملف<input type="file" hidden onchange="pick(this.files[0],'file')"></label>`);
 const rtick=()=>{const e=$('#rt');if(e&&REC2)e.textContent=fmt(Math.round((Date.now()-REC2.t0)/1000))};
 async function recStart(){if(!window.MediaRecorder||!navigator.mediaDevices)return toast('المتصفح مش بيدعم التسجيل');
@@ -324,7 +329,7 @@ const delStk=id=>run(async()=>{await q(sb.from('stickers').delete().eq('id',id))
 function fwd(id){FW=MS.find(x=>x.id==id);const r=[['general','💬 الشات العام']];if(ME.department_id)r.push(['dept:'+ME.department_id,'👥 شات قسمي']);
  sheet('<h3>توجيه إلى...</h3>'+r.map(x=>`<button class="it" onclick="doFwd('${x[0]}')">${x[1]}</button>`).join('')+P.filter(x=>!x.is_memorial&&x.id!=ME.id).map(x=>`<button class="it" onclick="doFwd('${dmRoom(x.id)}')">👤 ${esc(x.full_name)}</button>`).join(''))}
 const doFwd=room=>{closeSh();const m=FW;if(!m)return;run(async()=>{let mu=m.media_url;
- if(mu&&['image','video','audio','file'].includes(m.kind)){const np=room.replace(/:/g,'__')+'/'+crypto.randomUUID()+'.'+mu.split('.').pop();const{error}=await sb.storage.from('chat-media').copy(mu,np);if(error)throw error;mu=np}
+ if(mu&&!isUrl(mu)&&['image','video','audio','file'].includes(m.kind)){const np=room.replace(/:/g,'__')+'/'+crypto.randomUUID()+'.'+mu.split('.').pop();const{error}=await sb.storage.from('chat-media').copy(mu,np);if(error)throw error;mu=np}
  const r=await q(sb.from('messages').insert({room,kind:m.kind,content:m.content,media_url:mu,file_name:m.file_name,dur:m.dur,fwd:true}).select().single());if(room==curRoom())own(r);toast('اتوجّهت ✅')})};
 /* gestures: long-press = menu, swipe = reply */
 document.addEventListener('touchstart',e=>{const w=e.target.closest&&e.target.closest('.w');if(!w||!w.dataset.i||e.target.closest('input,button,audio,video'))return;const t=e.touches[0];LP={id:+w.dataset.i,x:t.clientX,y:t.clientY,tm:setTimeout(()=>{if(LP){const i=LP.id;LP=null;msgMenu(i)}},450)}},{passive:true});
