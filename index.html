@@ -233,6 +233,7 @@ const MAXM=52428800,MAXS=52428800;
 const UC_KEY='9faab03e3a9afc481141',UC_CDN='https://2ynwtrebsh.ucarecd.net/',UC_TH='-/preview/480x480/-/format/auto/-/quality/smart/',UC_FULL='-/preview/1600x1600/-/format/auto/-/quality/smart/';
 const isUrl=p=>/^https?:/.test(p||'');
 const ucU=p=>String(p).replace('https://ucarecdn.com/',UC_CDN);
+const ucRetry=el=>{const n=+(el.dataset.n||0),b=el.dataset.s;if(!b)return;if(n>=4){el.alt='تعذّر تحميل الصورة';return}el.dataset.n=n+1;setTimeout(()=>{el.src=b+'?r='+(n+1)},1500*(n+1))};
 const ucUp=async b=>{const fd=new FormData();fd.append('UPLOADCARE_PUB_KEY',UC_KEY);fd.append('UPLOADCARE_STORE','1');fd.append('file',b,'img.jpg');
  const r=await fetch('https://upload.uploadcare.com/base/',{method:'POST',body:fd});if(!r.ok)throw new Error('رفع الصورة فشل ('+r.status+')');
  const j=await r.json();if(!j.file)throw new Error('رفع الصورة فشل');return UC_CDN+j.file+'/'};
@@ -251,7 +252,7 @@ const ico={image:'🖼️ صورة',video:'🎞️ فيديو',audio:'🎤 رس�
 const prev=m=>m.deleted?'🚫 رسالة محذوفة':m.kind=='text'?(m.content||''):ico[m.kind]+(m.kind=='file'&&m.file_name?' '+m.file_name:'');
 function mBody(m){if(m.deleted)return `<i class="m">🚫 ${m.sender==ME.id?'حذفت هذه الرسالة':'تم حذف هذه الرسالة'}</i>`;
  const p=esc(m.media_url||'');
- if(m.kind=='image')return isUrl(m.media_url)?`<img class="mi" src="${ucU(p)}${UC_TH}" loading="lazy" onclick="view('${p}')">`:`<img class="mi" data-p="${p}" onclick="view('${p}')">`;
+ if(m.kind=='image')return isUrl(m.media_url)?`<img class="mi" src="${ucU(p)}${UC_TH}" data-s="${ucU(p)}${UC_TH}" onerror="ucRetry(this)" loading="lazy" onclick="view('${p}')">`:`<img class="mi" data-p="${p}" onclick="view('${p}')">`;
  if(m.kind=='video')return `<video class="mi" data-p="${p}" preload="metadata" controls playsinline></video>`;
  if(m.kind=='audio')return `<div class="au"><button onclick="pa(this)">▶</button><input type="range" value="0" max="100" oninput="sk(this)"><span>${fmt(m.dur||0)}</span><audio data-p="${p}" data-d="${m.dur||1}" preload="none"></audio></div>`;
  if(m.kind=='file')return `<div class="fl" onclick="openF('${p}')">📄 <span>${esc(m.file_name||'ملف')}</span></div>`;
@@ -269,7 +270,7 @@ const upd=m=>{const i=MS.findIndex(x=>x.id==m.id);if(i<0)MS.push(m);else MS[i]=m
 const own=m=>{if(MS.some(x=>x.id==m.id))return;MS.push(m);const e=$('#ms');if(!e)return;if(MS.length==1)return paintMs(1);const bt=m.sender==ME.id||e.scrollHeight-e.scrollTop-e.clientHeight<140;e.insertAdjacentHTML('beforeend',mHtml(m,MS.length-1));if(bt)e.scrollTop=e.scrollHeight;hyd()};
 const sgn=async p=>{if(isUrl(p))return ucU(p);const c=MU[p];if(c&&Date.now()-c.t<3e6)return c.u;const r=await sb.storage.from('chat-media').createSignedUrl(p,3600),u=r.data?r.data.signedUrl:'x';MU[p]={u,t:Date.now()};return u};
 async function hyd(){for(const e of document.querySelectorAll('[data-p]')){const p=e.dataset.p;e.removeAttribute('data-p');if(!p)continue;const u=await sgn(p);if(u!='x')e.src=u}}
-const view=async p=>{const u=await sgn(p),v=$('#vw'),fu=isUrl(p)?ucU(p)+UC_FULL:u;v.innerHTML=`<img src="${fu}"><a href="${u}" download target="_blank" onclick="event.stopPropagation()">⬇️ تحميل</a><span class="m">اضغط في أي مكان للإغلاق</span>`;v.style.display='flex';v.onclick=()=>v.style.display='none'};
+const view=async p=>{const u=await sgn(p),v=$('#vw'),fu=isUrl(p)?ucU(p)+UC_FULL:u;v.innerHTML=`<img src="${fu}" data-s="${fu}" onerror="ucRetry(this)"><a href="${u}" download target="_blank" onclick="event.stopPropagation()">⬇️ تحميل</a><span class="m">اضغط في أي مكان للإغلاق</span>`;v.style.display='flex';v.onclick=()=>v.style.display='none'};
 const openF=async p=>{const u=await sgn(p);window.open(u,'_blank')};
 async function pa(b){const w=b.parentNode,a=w.querySelector('audio'),r=w.querySelector('input');for(let i=0;i<20&&!a.getAttribute('src');i++)await new Promise(s=>setTimeout(s,100));
  if(a.paused){document.querySelectorAll('audio').forEach(x=>{if(x!==a)x.pause()});a.ontimeupdate=()=>{r.value=Math.min(100,a.currentTime/(+a.dataset.d||1)*100)};a.onended=()=>{b.textContent='▶';r.value=0};a.onpause=()=>{b.textContent='▶'};a.onplay=()=>{b.textContent='⏸'};a.play().catch(()=>toast('مش قادر يشغّل الصوت'))}else a.pause()}
