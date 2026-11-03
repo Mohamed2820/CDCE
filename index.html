@@ -311,7 +311,7 @@ const sendM=()=>{const i=$('#mi'),t=i.value.trim();if(!t)return;i.value='';tg();
 /* media */
 const sendMedia=(b,kind,ext,name,dur)=>{const room=curRoom(),path=room.replace(/:/g,'__')+'/'+crypto.randomUUID()+'.'+ext,rp=RPL?RPL.id:null;RPL=null;rb();
  run(async()=>{let mu=path;if(kind=='image'){mu=await ucUp(b)}else if(kind=='video'){mu=await clUp(b)}else{const{error}=await sb.storage.from('chat-media').upload(path,b,{contentType:(b.type||'application/octet-stream').split(';')[0]});if(error)throw error}
- own(await q(sb.from('messages').insert({room,kind,media_url:mu,file_name:name||null,dur:dur||null,reply_to:rp}).select().single()))})};
+ own(await q(sb.from('messages').insert({room,kind,media_url:mu,file_name:name||null,dur:dur||null,reply_to:rp,media_bytes:(b&&b.size)||null,media_provider:kind=='image'?'uploadcare':kind=='video'?'cloudinary':'supabase'}).select().single()))})};
 const pick=(f,k)=>{closeSh();if(!f)return;if(k=='video'&&f.size>MAXV)return toast('الفيديو أكبر من 20 ميجا. صوّر بجودة أقل أو قصّه');if(f.size>MAXM)return toast('الحجم أكبر من 50 ميجا (أقصى حد في Supabase المجاني)');const ext=((f.name.split('.').pop()||'bin').toLowerCase().replace(/[^a-z0-9]/g,'').slice(0,5))||'bin';
  if(k=='image'){if(f.type=='image/gif'&&f.size<=3e6)sendMedia(f,'image','gif');else rs(f,1280,b=>sendMedia(b,'image','jpg'))}else sendMedia(f,k,ext,f.name)};
 const attach=()=>sheet(`<label class="it">🖼️ صورة من المعرض<input type="file" accept="image/*" hidden onchange="pick(this.files[0],'image')"></label><label class="it">🎞️ فيديو من المعرض<input type="file" accept="video/*" hidden onchange="pick(this.files[0],'video')"></label><label class="it">📷 كاميرا (صورة)<input type="file" accept="image/*" capture="environment" hidden onchange="pick(this.files[0],'image')"></label><label class="it">🎥 كاميرا (فيديو)<input type="file" accept="video/*" capture="environment" hidden onchange="pick(this.files[0],'video')"></label><label class="it">📄 ملف<input type="file" hidden onchange="pick(this.files[0],'file')"></label>`);
@@ -442,9 +442,9 @@ const openMe=()=>run(async()=>{const r=await q(sb.from('messages').select('room'
 const openStg=()=>run(async()=>{RES=n(ME)>=3?await q(sb.rpc('list_resets')):[];CODES=ME.rank=='leader'?await q(sb.from('invite_codes').select('*').order('created_at',{ascending:false})):[];V={t:'settings'};draw()});
 const mine=()=>pbody(ME)+`<div class="card"><h3>محادثاتي الخاصة</h3>${DMS.map(r=>{const o=r.slice(3).split('_').find(x=>x!=ME.id);return `<div class="row" style="padding:6px 0" onclick="openRoom('${r}','${esc(nameBy(o))}','me')">💬 <b>${esc(nameBy(o))}</b></div>`}).join('')||'<p class="m">مفيش محادثات خاصة لسه.</p>'}</div><p class="m" style="text-align:center">لتعديل بياناتك افتح ⚙️ الإعدادات</p>`;
 let ss='me',sm=null,ec=null;
-const SS=[['me','👤 بياناتي'],['aik','🤖 الذكاء','A'],['mem','👥 الأعضاء',3],['dep','🗂️ الأقسام',2],['team','📝 الفريق',3],['codes','🔑 الأكواد','L'],['cq','❓ أسئلة الكود',3],['rst','🔐 الطلبات',3]];
-function stg(){const m=n(ME),t=SS.filter(x=>x[2]===undefined||(x[2]=='A'?AIADM:x[2]=='L'?ME.rank=='leader':m>=x[2]));if(!t.some(x=>x[0]==ss))ss='me';
- return `<h2>⚙️ الإعدادات</h2><div class="sub" style="overflow-x:auto">${t.map(x=>`<button class="btn ${ss==x[0]?'':'o'}" style="flex:none" onclick="ss='${x[0]}';sm=null;ec=null;draw()">${x[1]}</button>`).join('')}</div>`+({me:sMe,aik:sAik,mem:sMem,dep:sDep,team:sTeam,codes:sCodes,cq:sCq,rst:sRst}[ss])()}
+const SS=[['me','👤 بياناتي'],['aik','🤖 الذكاء','A'],['mem','👥 الأعضاء',3],['dep','🗂️ الأقسام',2],['team','📝 الفريق',3],['codes','🔑 الأكواد','L'],['cq','❓ أسئلة الكود',3],['sys','🛰️ النظام','D'],['rst','🔐 الطلبات',3]];
+function stg(){const m=n(ME),t=SS.filter(x=>x[2]===undefined||(x[2]=='A'?AIADM:x[2]=='L'?ME.rank=='leader':x[2]=='D'?!!ME.is_developer:m>=x[2]));if(!t.some(x=>x[0]==ss))ss='me';
+ return `<h2>⚙️ الإعدادات</h2><div class="sub" style="overflow-x:auto">${t.map(x=>`<button class="btn ${ss==x[0]?'':'o'}" style="flex:none" onclick="ss='${x[0]}';sm=null;ec=null;draw()">${x[1]}</button>`).join('')}</div>`+({me:sMe,aik:sAik,mem:sMem,dep:sDep,team:sTeam,codes:sCodes,cq:sCq,sys:sSys,rst:sRst}[ss])()}
 const sMe=()=>`<div class="card" style="text-align:center">${av(ME,'big')}<p class="m">${esc(ME.full_name)}</p>
  <label class="btn" style="display:block;margin:6px 0">🖼️ اختيار صورة من المعرض<input type="file" accept="image/*" hidden onchange="myAv(this.files[0])"></label>
  <label class="btn o" style="display:block">📷 التقاط صورة بالكاميرا<input type="file" accept="image/*" capture="user" hidden onchange="myAv(this.files[0])"></label></div>
@@ -496,8 +496,51 @@ const sCq=()=>{if(CQ===null){loadCQ();return '<div class="card m">بيحمّل..
  return '<div class="card"><h3>❓ أسئلة طلب الكود</h3><p class="m">لكل رتبة سؤال وإجابة. الشخص اللي يجاوب صح بياخد كود دعوة بالرتبة دي. الإجابة مش بتظهر هنا، اكتب إجابة جديدة بس لو عايز تغيّرها. الأرقام والتشكيل والهمزات مش بتفرق.</p></div>'+CQS.map((s,i)=>{const c=cqFind(s);return `<div class="card"><div class="row"><b class="grow">${esc(s.name)}</b><span class="tag">${c?'✅ متفعّل':'مفيش سؤال'}</span></div><input id="cqq_${i}" placeholder="السؤال" value="${esc(c?c.question:'')}"><input id="cqa_${i}" placeholder="${c?'إجابة جديدة (سيبها فاضية لو مش عايز تغيّرها)':'الإجابة'}"><div class="row" style="gap:6px"><button class="btn g grow" onclick="saveCq(${i})">حفظ</button>${c?`<button class="btn r" onclick="delCq('${c.id}')">حذف</button>`:''}</div></div>`}).join('')};
 const saveCq=i=>{const s=CQS[i],qq=($('#cqq_'+i).value||'').trim(),a=($('#cqa_'+i).value||'').trim();if(!cqFind(s)&&(!qq||!a))return toast('اكتب السؤال والإجابة');run(async()=>{await q(sb.rpc('save_code_question',{p_rank:s.rank,p_rank_def:s.rd,p_question:qq||null,p_answer:a||null}));toast('اتحفظ ✅');CQ=null;draw()})};
 const delCq=id=>{if(!confirm('حذف السؤال ده؟ الرتبة دي مش هتقدر تطلب كود.'))return;run(async()=>{await q(sb.rpc('delete_code_question',{p_id:id}));CQ=null;draw()})};
+
+let SYS=null,SVC=null,ERR=null,PNG={},SYSAT=0,SYSBUSY=false;
+const fb=b=>{b=+b||0;return b>=1073741824?(b/1073741824).toFixed(2)+' GB':b>=1048576?(b/1048576).toFixed(1)+' MB':(b/1024).toFixed(0)+' KB'};
+const KI={database:'🗄️',images:'🖼️',video:'🎬',hosting:'🌐',push:'🔔',voice:'🎙️',files:'📁',other:'🔌'};
+const pingOne=async s=>{const t=performance.now();try{
+ if(s.key=='supabase'){const r=await sb.rpc('public_departments');if(r.error)throw r.error}
+ else if(s.ping_url){const c=new AbortController(),to=setTimeout(()=>c.abort(),6000);try{await fetch(s.ping_url,{mode:'no-cors',cache:'no-store',signal:c.signal})}finally{clearTimeout(to)}}
+ else return{ok:null};
+ return{ok:true,ms:Math.round(performance.now()-t)}}catch(e){return{ok:false,ms:Math.round(performance.now()-t)}}};
+const loadSys=async()=>{if(SYSBUSY)return;SYSBUSY=true;try{
+ const[a,b,c]=await Promise.all([q(sb.rpc('dev_system')),q(sb.rpc('dev_list_services')),q(sb.rpc('dev_errors',{p_limit:20}))]);
+ SYS=a;SVC=b||[];ERR=c||[];SYSAT=Date.now();PNG={};draw();
+ await Promise.all(SVC.map(async x=>{PNG[x.key]=await pingOne(x)}));
+}catch(e){SYS=SYS||{};SVC=SVC||[];ERR=ERR||[];toast('تعذّر تحميل بيانات النظام')}finally{SYSBUSY=false;draw()}};
+const sysUse=k=>{if(!SYS)return null;const m=SYS.media||{};return({db_bytes:SYS.db_bytes,storage_bytes:SYS.storage_bytes,users:SYS.users,uc_bytes:(m.uploadcare||{}).bytes,cl_bytes:(m.cloudinary||{}).bytes})[k]};
+const sysBar=(lb,used,max,f)=>{const p=max?Math.min(100,used/max*100):0,c=p>=90?'#ef4444':p>=70?'#f59e0b':'#22c55e';return `<div class="m" style="margin-top:8px">${esc(lb)}: <b>${f(used)}</b> / ${f(max)} (${p.toFixed(p<10?1:0)}%)</div><div style="height:8px;border-radius:6px;background:var(--b);overflow:hidden"><div style="width:${p}%;height:100%;background:${c}"></div></div>`};
+const sysLim=l=>{const max=l.gb?l.gb*1073741824:l.count,u=l.usage?sysUse(l.usage):null,f=l.gb?fb:(x=>Number(x).toLocaleString('en'));
+ if(u==null||u===undefined)return `<div class="m" style="margin-top:8px">${esc(l.label)}: الحد ${f(max)} <small>(مش بنقدر نقيسه من هنا)</small></div>`;return sysBar(l.label,u,max,f)};
+const sysCard=x=>{const p=PNG[x.key];
+ const st=x.status=='planned'?'<span class="tag">⏳ قيد الإعداد</span>':x.status=='off'?'<span class="tag">⛔ متوقف</span>':p===undefined?'<span class="tag">... بيفحص</span>':p.ok===null?'<span class="tag">—</span>':p.ok?`<span class="tag" style="color:#22c55e">🟢 شغّال • ${p.ms}ms</span>`:'<span class="tag" style="color:#ef4444">🔴 مش بيرد</span>';
+ const lk=(u,t)=>u?`<a class="btn o" style="padding:6px 12px;display:inline-block;text-decoration:none" href="${esc(u)}" target="_blank" rel="noopener">${t}</a>`:'';
+ return `<div class="card"><div class="row"><b class="grow">${KI[x.kind]||'🔌'} ${esc(x.name)}</b>${st}</div>${x.notes?`<p class="m">${esc(x.notes)}</p>`:''}${(x.limits||[]).map(sysLim).join('')}
+ <div class="row" style="gap:6px;margin-top:10px;flex-wrap:wrap">${lk(x.site_url,'🔗 الموقع')}${lk(x.dashboard_url,'⚙️ لوحة التحكم')}<button class="btn o" style="padding:6px 12px" onclick="svcEdit('${x.key}')">✏️ تعديل</button></div></div>`};
+const svcEdit=k=>{const x=k?(SVC||[]).find(y=>y.key==k):{};if(k&&!x)return;const lm=x.limits||[],multi=lm.length>1,l=lm[0]||{};
+ sheet(`<h3>${k?'تعديل':'إضافة'} موقع مرتبط</h3><input id="sv_n" placeholder="الاسم" value="${esc(x.name||'')}"><select id="sv_k">${Object.keys(KI).map(y=>`<option value="${y}" ${y==(x.kind||'other')?'selected':''}>${KI[y]} ${y}</option>`).join('')}</select><select id="sv_s">${[['active','شغّال'],['planned','قيد الإعداد'],['off','متوقف']].map(y=>`<option value="${y[0]}" ${y[0]==(x.status||'active')?'selected':''}>${y[1]}</option>`).join('')}</select><input id="sv_u" placeholder="رابط الموقع" value="${esc(x.site_url||'')}"><input id="sv_d" placeholder="رابط لوحة التحكم" value="${esc(x.dashboard_url||'')}"><input id="sv_p" placeholder="رابط فحص الحالة (اختياري)" value="${esc(x.ping_url||'')}">${multi?'<p class="m">الحدود المتعددة بتتعدّل بالمساعدة، مش من هنا.</p>':`<input id="sv_ll" placeholder="اسم الحد (مثال: التخزين)" value="${esc(l.label||'')}"><input id="sv_lg" type="number" step="0.1" placeholder="قيمة الحد بالجيجا" value="${l.gb||''}">`}<input id="sv_nt" placeholder="ملاحظة" value="${esc(x.notes||'')}"><button class="btn g" style="width:100%;margin-top:8px" onclick="svcSave('${k||''}')">حفظ</button>${k?`<button class="btn r" style="width:100%;margin-top:6px" onclick="svcDel('${k}')">حذف</button>`:''}`)};
+const svcSave=k=>{const old=k?(SVC||[]).find(y=>y.key==k):null,nm=$('#sv_n').value.trim();if(!nm)return toast('اكتب الاسم');
+ const multi=old&&(old.limits||[]).length>1;let lim=multi?old.limits:[];
+ if(!multi){const lb=($('#sv_ll')||{}).value,g=parseFloat(($('#sv_lg')||{}).value);if(lb&&g>0){lim=[{label:lb,gb:g}];const u=old&&(old.limits||[])[0]&&old.limits[0].usage;if(u)lim[0].usage=u}}
+ run(async()=>{await q(sb.rpc('dev_save_service',{p:{key:k||null,name:nm,kind:$('#sv_k').value,status:$('#sv_s').value,site_url:$('#sv_u').value.trim(),dashboard_url:$('#sv_d').value.trim(),ping_url:$('#sv_p').value.trim(),limits:lim,notes:$('#sv_nt').value.trim(),sort:old?old.sort:50}}));closeSh();toast('اتحفظ ✅');SYS=null;draw()})};
+const svcDel=k=>{if(!confirm('حذف الموقع ده من القائمة؟ (مش بيمسح الموقع نفسه، بس بيشيله من هنا)'))return;run(async()=>{await q(sb.rpc('dev_delete_service',{p_key:k}));closeSh();toast('اتحذف');SYS=null;draw()})};
+const errClear=()=>{if(!confirm('مسح كل الأخطاء المسجّلة؟'))return;run(async()=>{await q(sb.rpc('dev_clear_errors'));SYS=null;draw()})};
+const sSys=()=>{if(SYS===null){loadSys();return '<div class="card m">بيحمّل بيانات النظام...</div>'}
+ const m=SYS.media||{},ago=SYSAT?Math.round((Date.now()-SYSAT)/1000):0;
+ const mrow=(n,l)=>{const x=m[n];return x?`<div class="m">${l}: ${x.n} ملف • ${fb(x.bytes)}${x.unknown?` <small>(${x.unknown} قديم من غير حجم)</small>`:''}</div>`:''};
+ const er=ERR||[];
+ return `<div class="card"><div class="row"><h3 class="grow">🛰️ حالة النظام</h3><button class="btn o" style="padding:6px 14px" onclick="SYS=null;draw()">🔄 تحديث</button></div><p class="m">آخر تحديث من ${ago} ثانية. أي موقع بنربط التطبيق بيه بيظهر هنا.</p></div>`
+ +(SVC||[]).map(sysCard).join('')
+ +`<button class="btn g" style="width:100%;margin:8px 0" onclick="svcEdit('')">➕ إضافة موقع مرتبط</button>`
+ +`<div class="card"><h3>📊 التطبيق</h3><div class="m">الأعضاء: <b>${SYS.users}</b></div><div class="m">الرسائل: اليوم <b>${SYS.msgs_24h}</b> • الأسبوع <b>${SYS.msgs_7d}</b> • الكل <b>${SYS.msgs_total}</b></div>${mrow('uploadcare','🖼️ صور (Uploadcare)')}${mrow('cloudinary','🎬 فيديو (Cloudinary)')}${mrow('supabase','📁 ملفات وصوت (Supabase)')}</div>`
+ +`<div class="card"><h3>🔐 الأمان</h3><div class="m">محاولات كود غلط (24 ساعة): <b>${SYS.code_failed_24h}</b> • ناجحة: <b>${SYS.code_ok_24h}</b></div><div class="m">طلبات كلمة السر: <b>${SYS.pw_requests}</b></div></div>`
+ +`<div class="card"><div class="row"><h3 class="grow">🐞 آخر الأخطاء (${SYS.errors_24h} في 24 ساعة)</h3>${er.length?'<button class="btn o" style="padding:6px 14px" onclick="errClear()">مسح</button>':''}</div>${er.length?er.map(e=>`<div class="m" style="border-top:1px solid var(--b);padding:6px 0"><b>${esc(e.msg)}</b><br><small>${esc(e.full_name||'؟')} • ${new Date(e.created_at).toLocaleString('ar-EG')}${e.src?' • '+esc(String(e.src).split('/').pop())+(e.line?':'+e.line:''):''}</small></div>`).join(''):'<p class="m">مفيش أخطاء مسجّلة 🎉</p>'}</div>`};
 const sRst=()=>`<div class="card"><h3>طلبات نسيان كلمة السر</h3>${RES.map(r=>`<div class="memo"><b>${esc(r.full_name)}</b> <span class="tag">${RL(r)}</span><input id="rp_${r.id}" placeholder="كلمة سر مؤقتة (6+)"><button class="btn g" onclick="doReset('${r.id}')">تعيين</button></div>`).join('')||'<p class="m">مفيش طلبات.</p>'}</div>`;
 const doReset=id=>run(async()=>{await q(sb.rpc('admin_reset',{req:id,newpw:$('#rp_'+id).value}));toast('اتعيّنت كلمة السر المؤقتة ✅');await openStg()});
+(()=>{let n=0;const rep=(m,s,l)=>{try{if(!U||n>=5)return;n++;sb.rpc('log_client_error',{p_msg:String(m||'').slice(0,500),p_src:String(s||'').slice(0,200),p_line:l||null,p_ua:navigator.userAgent.slice(0,200)}).then(()=>{},()=>{})}catch(e){}};
+ window.addEventListener('error',e=>rep(e.message,e.filename,e.lineno));window.addEventListener('unhandledrejection',e=>rep('Promise: '+((e.reason&&e.reason.message)||e.reason),'',0))})();
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 boot();
 </script></body></html>
