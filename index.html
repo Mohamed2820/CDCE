@@ -232,6 +232,10 @@ function prof(){const x=P.find(y=>y.id==V.id);if(!x)return'';
 const MAXM=52428800,MAXS=52428800;
 const UC_KEY='9faab03e3a9afc481141',UC_CDN='https://2ynwtrebsh.ucarecd.net/',UC_TH='-/preview/480x480/-/format/auto/-/quality/smart/',UC_FULL='-/preview/1600x1600/-/format/auto/-/quality/smart/';
 const isUrl=p=>/^https?:/.test(p||'');
+const CL_CLOUD='pz90ebpe',CL_PRESET='cdce_video',MAXV=20*1024*1024;
+const clUp=async b=>{const fd=new FormData();fd.append('file',b,'video.mp4');fd.append('upload_preset',CL_PRESET);
+ const r=await fetch('https://api.cloudinary.com/v1_1/'+CL_CLOUD+'/video/upload',{method:'POST',body:fd});if(!r.ok)throw new Error('رفع الفيديو فشل ('+r.status+')');
+ const j=await r.json();if(!j.secure_url)throw new Error('رفع الفيديو فشل');return j.secure_url};
 const ucU=p=>String(p).replace('https://ucarecdn.com/',UC_CDN);
 const ucRetry=el=>{const n=+(el.dataset.n||0),b=el.dataset.s;if(!b)return;if(n>=4){el.alt='تعذّر تحميل الصورة';return}el.dataset.n=n+1;setTimeout(()=>{el.src=b+'?r='+(n+1)},1500*(n+1))};
 const ucUp=async b=>{const fd=new FormData();fd.append('UPLOADCARE_PUB_KEY',UC_KEY);fd.append('UPLOADCARE_STORE','1');fd.append('file',b,'img.jpg');
@@ -253,7 +257,7 @@ const prev=m=>m.deleted?'🚫 رسالة محذوفة':m.kind=='text'?(m.content
 function mBody(m){if(m.deleted)return `<i class="m">🚫 ${m.sender==ME.id?'حذفت هذه الرسالة':'تم حذف هذه الرسالة'}</i>`;
  const p=esc(m.media_url||'');
  if(m.kind=='image')return isUrl(m.media_url)?`<img class="mi" src="${ucU(p)}${UC_TH}" data-s="${ucU(p)}${UC_TH}" onerror="ucRetry(this)" loading="lazy" onclick="view('${p}')">`:`<img class="mi" data-p="${p}" onclick="view('${p}')">`;
- if(m.kind=='video')return `<video class="mi" data-p="${p}" preload="metadata" controls playsinline></video>`;
+ if(m.kind=='video')return `<video class="mi" data-p="${p}" preload="none" controls playsinline></video>`;
  if(m.kind=='audio')return `<div class="au"><button onclick="pa(this)">▶</button><input type="range" value="0" max="100" oninput="sk(this)"><span>${fmt(m.dur||0)}</span><audio data-p="${p}" data-d="${m.dur||1}" preload="none"></audio></div>`;
  if(m.kind=='file')return `<div class="fl" onclick="openF('${p}')">📄 <span>${esc(m.file_name||'ملف')}</span></div>`;
  if(m.kind=='sticker')return m.media_url?`<img class="stk" src="${esc(m.media_url)}" loading="lazy">`:`<div class="stk em">${esc(m.content)}</div>`;
@@ -306,9 +310,9 @@ const sendM=()=>{const i=$('#mi'),t=i.value.trim();if(!t)return;i.value='';tg();
  const rp=RPL?RPL.id:null;RPL=null;rb();run(async()=>{own(await q(sb.from('messages').insert({room:curRoom(),content:t,reply_to:rp}).select().single()))})};
 /* media */
 const sendMedia=(b,kind,ext,name,dur)=>{const room=curRoom(),path=room.replace(/:/g,'__')+'/'+crypto.randomUUID()+'.'+ext,rp=RPL?RPL.id:null;RPL=null;rb();
- run(async()=>{let mu=path;if(kind=='image'){mu=await ucUp(b)}else{const{error}=await sb.storage.from('chat-media').upload(path,b,{contentType:(b.type||'application/octet-stream').split(';')[0]});if(error)throw error}
+ run(async()=>{let mu=path;if(kind=='image'){mu=await ucUp(b)}else if(kind=='video'){mu=await clUp(b)}else{const{error}=await sb.storage.from('chat-media').upload(path,b,{contentType:(b.type||'application/octet-stream').split(';')[0]});if(error)throw error}
  own(await q(sb.from('messages').insert({room,kind,media_url:mu,file_name:name||null,dur:dur||null,reply_to:rp}).select().single()))})};
-const pick=(f,k)=>{closeSh();if(!f)return;if(f.size>MAXM)return toast('الحجم أكبر من 50 ميجا (أقصى حد في Supabase المجاني)');const ext=((f.name.split('.').pop()||'bin').toLowerCase().replace(/[^a-z0-9]/g,'').slice(0,5))||'bin';
+const pick=(f,k)=>{closeSh();if(!f)return;if(k=='video'&&f.size>MAXV)return toast('الفيديو أكبر من 20 ميجا. صوّر بجودة أقل أو قصّه');if(f.size>MAXM)return toast('الحجم أكبر من 50 ميجا (أقصى حد في Supabase المجاني)');const ext=((f.name.split('.').pop()||'bin').toLowerCase().replace(/[^a-z0-9]/g,'').slice(0,5))||'bin';
  if(k=='image'){if(f.type=='image/gif'&&f.size<=3e6)sendMedia(f,'image','gif');else rs(f,1280,b=>sendMedia(b,'image','jpg'))}else sendMedia(f,k,ext,f.name)};
 const attach=()=>sheet(`<label class="it">🖼️ صورة من المعرض<input type="file" accept="image/*" hidden onchange="pick(this.files[0],'image')"></label><label class="it">🎞️ فيديو من المعرض<input type="file" accept="video/*" hidden onchange="pick(this.files[0],'video')"></label><label class="it">📷 كاميرا (صورة)<input type="file" accept="image/*" capture="environment" hidden onchange="pick(this.files[0],'image')"></label><label class="it">🎥 كاميرا (فيديو)<input type="file" accept="video/*" capture="environment" hidden onchange="pick(this.files[0],'video')"></label><label class="it">📄 ملف<input type="file" hidden onchange="pick(this.files[0],'file')"></label>`);
 const rtick=()=>{const e=$('#rt');if(e&&REC2)e.textContent=fmt(Math.round((Date.now()-REC2.t0)/1000))};
