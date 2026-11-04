@@ -61,7 +61,7 @@ nav button b{display:block;font-size:20px;font-weight:400}nav button.on{color:va
 .cmp{display:flex;align-items:center;gap:4px;padding:6px 8px;background:var(--bg)}.cmp input{margin:0;border-radius:22px;flex:1;min-width:0}
 .rb{padding:6px 10px;background:var(--c);border-top:1px solid var(--b)}
 .rbx{display:flex;gap:8px;align-items:center;border-inline-start:4px solid var(--a);padding:4px 8px;background:var(--bg);border-radius:6px}
-.hl .b{outline:2px solid var(--a)}
+.hl .b{outline:2px solid var(--a)}.w.pend .b{opacity:.65}.w.fail .b{opacity:1;outline:1px solid var(--r)}.w.fail b{cursor:pointer;color:var(--a)}
 #sh{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:26;align-items:flex-end;justify-content:center}
 .sh{background:var(--c);width:100%;max-width:520px;border-radius:18px 18px 0 0;padding:10px;max-height:75vh;overflow:auto}
 .it{display:block;width:100%;text-align:start;background:none;border:0;border-bottom:1px solid var(--b);padding:14px 8px;font:inherit;color:var(--t)}
@@ -79,18 +79,22 @@ const RN={member:'ممبر',board:'بورد',assistant_head:'مساعد هيد',
 const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const lg=k=>{try{return localStorage.getItem(k)}catch(e){}},ls=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
 let U=null,ME=null,P=[],DEP=[],ST={},V={t:'home'},ed=0,mode='in',MS=[],PL=[],VT=[],sub='chat',CODES=[],RES=[],DMS=[],ps=0;
-const EM=[[/Invalid login/i,'رقم التليفون أو كلمة السر غلط'],[/already registered/i,'الرقم ده مسجّل قبل كده'],[/leader only/i,'العملية دي للليدر بس'],[/points not allowed/i,'مش مسموح تغيّر نقاط الشخص ده'],[/poll closed/i,'التصويت خلص'],[/no edits left/i,'خلصت تعديلاتك الـ3'],[/target cannot/i,'مينفعش تصوّت على نفسك'],[/Failed to fetch|NetworkError|network/i,'مفيش اتصال بالإنترنت'],[/weak password|at least 6|should be at least/i,'كلمة السر لازم 6 حروف على الأقل'],[/Database error saving/i,'الكود مش صالح أو اتستخدم'],[/row-level|permission|not allowed|violates/i,'مش مسموح لك بالعملية دي'],[/locked/i,'حاولت كتير غلط. استنى 15 دقيقة'],[/duplicate|unique/i,'موجود قبل كده']];
+const EM=[[/انتهت المهلة|timeout|aborted/i,'النت ضعيف أو الخدمة مش بترد. جرّب تاني.'],[/Invalid login/i,'رقم التليفون أو كلمة السر غلط'],[/already registered/i,'الرقم ده مسجّل قبل كده'],[/leader only/i,'العملية دي للليدر بس'],[/points not allowed/i,'مش مسموح تغيّر نقاط الشخص ده'],[/poll closed/i,'التصويت خلص'],[/no edits left/i,'خلصت تعديلاتك الـ3'],[/target cannot/i,'مينفعش تصوّت على نفسك'],[/Failed to fetch|NetworkError|network/i,'مفيش اتصال بالإنترنت'],[/weak password|at least 6|should be at least/i,'كلمة السر لازم 6 حروف على الأقل'],[/Database error saving/i,'الكود مش صالح أو اتستخدم'],[/row-level|permission|not allowed|violates/i,'مش مسموح لك بالعملية دي'],[/locked/i,'حاولت كتير غلط. استنى 15 دقيقة'],[/duplicate|unique/i,'موجود قبل كده']];
 const ar=e=>{const m=(e&&e.message)||String(e),h=EM.find(x=>x[0].test(m));return h?h[1]:'حصلت مشكلة، حاول تاني'};
 let tt;function toast(m){const t=$('#tt');t.textContent=m;t.style.display='block';clearTimeout(tt);tt=setTimeout(()=>t.style.display='none',3500)}
-async function run(f){$('#ld').style.display='block';try{return await f()}catch(e){toast(ar(e))}finally{$('#ld').style.display='none'}}
-const q=async p=>{const r=await p;if(r.error)throw r.error;return r.data};
+let RUNERR=false;
+async function run(f){$('#ld').style.display='block';try{return await f()}catch(e){RUNERR=true;toast(ar(e))}finally{$('#ld').style.display='none'}}
+const tmo=(p,ms,msg)=>new Promise((res,rej)=>{const t=setTimeout(()=>rej(new Error(msg||'انتهت المهلة')),ms);Promise.resolve(p).then(v=>{clearTimeout(t);res(v)},e=>{clearTimeout(t);rej(e)})});
+const q=async(p,ms)=>{const r=await tmo(p,ms||20000);if(r.error)throw r.error;return r.data};
+const inv=(n,o,ms)=>tmo(sb.functions.invoke(n,o),ms||30000);
 const go=v=>{V=v;draw()},dn=id=>(DEP.find(d=>d.id==id)||{}).name||'',nameBy=id=>(P.find(x=>x.id==id)||{}).full_name||'النظام';
-async function boot(){await run(async()=>{const{data:{session}}=await sb.auth.getSession();if(!session){U=null;return login()}U=session.user;if(!await claim()){await sb.auth.signOut();U=null;toast('الحساب مفتوح على جهاز تاني. اعمل تسجيل خروج منه أو استنى دقيقتين.');return login()}await load();await loadRD();subRt();draw();unreadInit();aiAdm().then(()=>{});if(REC){const c=REC;REC=null;showRec(c)}else if(ME&&lg('cdce_seen')!='1')guide(0)})}
+async function boot(){RUNERR=false;await run(async()=>{const{data:{session}}=await sb.auth.getSession();if(!session){U=null;return login()}U=session.user;if(!await claim()){await sb.auth.signOut();U=null;toast('الحساب مفتوح على جهاز تاني. اعمل تسجيل خروج منه أو استنى دقيقتين.');return login()}await load();await loadRD();subRt();draw();unreadInit();aiAdm().then(()=>{});if(REC){const c=REC;REC=null;showRec(c)}else if(ME&&lg('cdce_seen')!='1')guide(0)});
+ if(RUNERR){$('#nav').hidden=true;$('#v').innerHTML='<div class="card" style="text-align:center;margin:60px 16px"><p>تعذّر تحميل التطبيق. اتأكد من النت وحاول تاني.</p><button class="btn" onclick="boot()">🔁 حاول تاني</button></div>'}}
 async function load(){const[d,p,s]=await Promise.all([q(sb.from('departments').select('*')),q(sb.from('profiles').select('*')),q(sb.from('team_settings').select('*').eq('id',1).single())]);DEP=d||[];const all=p||[];DEVP=all.find(x=>x.is_developer)||null;ME=all.find(x=>x.user_id==U.id);if(ME&&ME.is_developer)ME.rank='leader';P=all.filter(x=>!x.is_developer);ST=s||{}}
 const norm=s=>String(s).replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/\D/g,''),mail=ph=>norm(ph)+'@cdce.app';
 let PW_TMP='';
-const twinSync=async(f,v)=>{if(!ME||!(ME.twin_user_id||ME.is_developer))return;const{data,error}=await sb.functions.invoke('twin',{body:{action:'sync',field:f,value:v}});if(error||(data&&data.error))toast('حصل خطأ في مزامنة الحساب التاني')};
-const pickAcc=async(ph,pw)=>{const d=norm(ph);const{data,error}=await sb.functions.invoke('twin',{body:{action:'login',phone:d,password:pw}});
+const twinSync=async(f,v)=>{if(!ME||!(ME.twin_user_id||ME.is_developer))return;const{data,error}=await inv('twin',{body:{action:'sync',field:f,value:v}});if(error||(data&&data.error))toast('حصل خطأ في مزامنة الحساب التاني')};
+const pickAcc=async(ph,pw)=>{const d=norm(ph);const{data,error}=await inv('twin',{body:{action:'login',phone:d,password:pw}});
  if(error){let m='الرقم أو كلمة السر غلط';try{const j=await error.context.json();if(j.error)m=j.error}catch(e){}throw new Error(m)}
  const acc=(data&&data.accounts)||[];
  if(acc.length==1){const r=await sb.auth.signInWithPassword({email:acc[0].email,password:pw});if(r.error)throw r.error;return boot()}
@@ -101,7 +105,7 @@ const switchAcc=()=>sheet(`<h3>ادخل على الحساب التاني</h3><p 
 const doSwitch=()=>run(async()=>{const pw=$('#swpw').value;const r=await sb.auth.signInWithPassword({email:twinEmail(),password:pw});if(r.error)throw new Error('كلمة السر غلط');closeSh();await boot()});
 const altCard=()=>{if(!ME||!(ME.twin_user_id||ME.is_developer))return '';return `<div class="card" style="text-align:center"><div class="m">${ME.is_developer?'حسابك الأساسي':'حساب المطور'}</div><div style="font-size:14px;margin:6px 0">${ME.is_developer?'👤 ممبر':'🛠️ مطور النظام'}</div><button class="btn o" style="width:100%;font-size:12px" onclick="switchAcc()">🔁 تبديل</button></div>`};
 const devCard=()=>{if(!ME)return '';if(ME.is_developer||ME.twin_user_id)return `<div class="card"><button class="btn o" style="width:100%" onclick="switchAcc()">🔁 ادخل على ${ME.is_developer?'حسابك كممبر':'حساب المطور'}</button></div>`;return `<div class="card"><h3>🛠️ حساب المطور</h3><p class="m">بيتعمل بنفس رقمك وكلمة سرك، وبيكون له صلاحيات الليدر من غير ما يظهر في الهرم أو الأقسام. اكتب كلمة سرك عشان نأكد.</p><input id="dpw" type="password" placeholder="كلمة السر"><button class="btn g" style="width:100%;margin-top:6px" onclick="createDev()">إنشاء حساب المطور</button></div>`};
-const createDev=async()=>{const pw=$('#dpw').value;if(!pw)return toast('اكتب كلمة السر');try{const{data,error}=await sb.functions.invoke('twin',{body:{action:'create',password:pw}});if(error){let m='خطأ '+(error.context&&error.context.status||'')+': '+(error.message||'');try{const j=await error.context.json();if(j.error)m=j.error+' ('+(error.context.status||'')+')'}catch(e){}toast(m);return}if(data&&data.error)return toast(data.error);toast('اتعمل حساب المطور ✅');await load();draw()}catch(e){toast('خطأ: '+(e.message||e))}};
+const createDev=async()=>{const pw=$('#dpw').value;if(!pw)return toast('اكتب كلمة السر');try{const{data,error}=await inv('twin',{body:{action:'create',password:pw}});if(error){let m='خطأ '+(error.context&&error.context.status||'')+': '+(error.message||'');try{const j=await error.context.json();if(j.error)m=j.error+' ('+(error.context.status||'')+')'}catch(e){}toast(m);return}if(data&&data.error)return toast(data.error);toast('اتعمل حساب المطور ✅');await load();draw()}catch(e){toast('خطأ: '+(e.message||e))}};
 const RL=x=>x&&x.is_developer?'the_developer':RN[x.rank];
 let DCS=null;
 const loadDC=async()=>{try{DCS=await q(sb.from('dev_complaints').select('*').order('created_at',{ascending:false}))}catch(e){DCS=[]}draw()};
@@ -173,7 +177,7 @@ function draw(){if(!ME){$('#v').innerHTML='<div class="card">حسابك لسه �
  $('#v').innerHTML=({home,depts,pyr,dept,prof,chat,vip,ai,dev:devPage,me:mine,settings:stg,pm:pmv}[V.t])();const mm=$('#ms');if(mm){mm.scrollTop=mm.scrollHeight;hyd();rb()}const am=$('#am');if(am)am.scrollTop=am.scrollHeight}
 function tab(t){if(t=='ann')openRoom('ann','الرسايل المهمة');else if(t=='general')openRoom('general','الشات العام');else if(t=='vip'){sub='chat';openRoom('vip','VIP')}else if(t=='polls'){sub='polls';subP()}else if(t=='pm')openPm();else if(t=='me')openMe();else if(t=='settings')openStg();else go({t})}
 const pts=x=>(x.rank=='leader'||x.is_memorial)?'':`<span class="tag">${x.points} نقطة</span>`;
-const av=(x,c='')=>x.avatar_url?`<img class="av ${c}" src="${esc(x.avatar_url)}">`:`<div class="av ${c}">${x.is_memorial?'🕊️':esc(x.full_name[0])}</div>`;
+const av=(x,c='')=>x.avatar_url?`<img class="av ${c}" src="${esc(x.avatar_url)}" loading="lazy" decoding="async">`:`<div class="av ${c}">${x.is_memorial?'🕊️':esc(x.full_name[0])}</div>`;
 const row=x=>`<div class="row" onclick="go({t:'prof',id:'${x.id}'})">${av(x)}<div class="grow"><b>${esc(x.full_name)}</b><div class="m">${x.is_memorial?'ليدر سابق • في ذكرى':RL(x)+(x.department_id?' • '+esc(dn(x.department_id)):'')}</div></div>${pts(x)}</div>`;
 const sec=(t,k)=>`<h3>${t}</h3><p class="m" style="white-space:pre-wrap">${esc(ST[k]||'لسه ما اتكتبش.')}</p>`;
 function home(){const l=P.find(x=>x.rank=='leader'&&!x.is_memorial),o=P.filter(x=>x.is_memorial),L=ST.links||[];
@@ -185,8 +189,9 @@ function home(){const l=P.find(x=>x.rank=='leader'&&!x.is_memorial),o=P.filter(x
 const setLinks=L=>run(async()=>{await q(sb.from('team_settings').update({links:L}).eq('id',1));await load();draw()});
 function addLink(){const t=$('#lt').value.trim(),u=$('#lu').value.trim();if(!t||!/^https?:\/\//.test(u))return toast('اكتب اسم ولينك يبدأ بـ https://');setLinks([...(ST.links||[]),{t,u}])}
 function delLink(i){const L=[...(ST.links||[])];L.splice(i,1);setLinks(L)}
-function rs(f,mx,cb){if(!f)return;const u=URL.createObjectURL(f),i=new Image();i.onload=()=>{const k=Math.min(1,mx/Math.max(i.width,i.height)),c=document.createElement('canvas');c.width=i.width*k;c.height=i.height*k;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(i,0,0,c.width,c.height);c.toBlob(b=>cb(b),'image/jpeg',.8);URL.revokeObjectURL(u)};i.src=u}
-function upImg(f,path,mx,after){rs(f,mx,b=>run(async()=>{const{error}=await sb.storage.from('public-assets').upload(path,b,{upsert:true,contentType:'image/jpeg'});if(error)throw error;
+let _webp=null;const webpOK=()=>{if(_webp===null){try{_webp=document.createElement('canvas').toDataURL('image/webp').indexOf('data:image/webp')==0}catch(e){_webp=false}}return _webp};
+function rs(f,mx,cb,o){o=o||{};if(!f)return;const u=URL.createObjectURL(f),i=new Image();i.onload=()=>{const k=Math.min(1,mx/Math.max(i.width,i.height)),c=document.createElement('canvas');c.width=Math.round(i.width*k);c.height=Math.round(i.height*k);const x=c.getContext('2d');if(!o.alpha){x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height)}x.drawImage(i,0,0,c.width,c.height);c.toBlob(b=>cb(b),o.fmt=='webp'&&webpOK()?'image/webp':o.alpha?'image/png':'image/jpeg',.8);URL.revokeObjectURL(u)};i.src=u}
+function upImg(f,path,mx,after){rs(f,mx,b=>run(async()=>{const{error}=await sb.storage.from('public-assets').upload(path,b,{upsert:true,contentType:'image/jpeg',cacheControl:'31536000'});if(error)throw error;
  await after(sb.storage.from('public-assets').getPublicUrl(path).data.publicUrl+'?t='+Date.now());await load();draw();toast('اتحفظت الصورة ✅')}))}
 const dmem=d=>{const m=P.filter(x=>x.department_id==d&&!x.is_memorial);P.filter(x=>x.rank=='leader'&&!x.is_memorial).forEach(l=>{if(!m.includes(l))m.push(l)});return m};
 const depts=()=>`<h2>أقسام الفريق</h2>`+DEP.map(d=>`<div class="card row" onclick="go({t:'dept',id:'${d.id}'})"><div class="av">${esc(d.emoji||'👥')}</div><div class="grow"><b>${esc(d.name)}</b><div class="m">${dmem(d.id).length} فرد</div></div>›</div>`).join('');
@@ -234,13 +239,17 @@ const UC_KEY='9faab03e3a9afc481141',UC_CDN='https://2ynwtrebsh.ucarecd.net/',UC_
 const isUrl=p=>/^https?:/.test(p||'');
 const CL_CLOUD='pz90ebpe',CL_PRESET='cdce_video',MAXV=20*1024*1024;
 const clUp=async b=>{const fd=new FormData();fd.append('file',b,'video.mp4');fd.append('upload_preset',CL_PRESET);
- const r=await fetch('https://api.cloudinary.com/v1_1/'+CL_CLOUD+'/video/upload',{method:'POST',body:fd});if(!r.ok)throw new Error('رفع الفيديو فشل ('+r.status+')');
- const j=await r.json();if(!j.secure_url)throw new Error('رفع الفيديو فشل');return j.secure_url};
+ const c=new AbortController(),t=setTimeout(()=>c.abort(),150000);
+ try{const r=await fetch('https://api.cloudinary.com/v1_1/'+CL_CLOUD+'/video/upload',{method:'POST',body:fd,signal:c.signal});if(!r.ok)throw new Error('رفع الفيديو فشل ('+r.status+')');
+ const j=await r.json();if(!j.secure_url)throw new Error('رفع الفيديو فشل');return j.secure_url}
+ catch(e){if(e&&e.name=='AbortError')throw new Error('انتهت المهلة');throw e}finally{clearTimeout(t)}};
 const ucU=p=>String(p).replace('https://ucarecdn.com/',UC_CDN);
 const ucRetry=el=>{const n=+(el.dataset.n||0),b=el.dataset.s;if(!b)return;if(n>=4){el.alt='تعذّر تحميل الصورة';return}el.dataset.n=n+1;setTimeout(()=>{el.src=b+'?r='+(n+1)},1500*(n+1))};
 const ucUp=async b=>{const fd=new FormData();fd.append('UPLOADCARE_PUB_KEY',UC_KEY);fd.append('UPLOADCARE_STORE','1');fd.append('file',b,'img.jpg');
- const r=await fetch('https://upload.uploadcare.com/base/',{method:'POST',body:fd});if(!r.ok)throw new Error('رفع الصورة فشل ('+r.status+')');
- const j=await r.json();if(!j.file)throw new Error('رفع الصورة فشل');return UC_CDN+j.file+'/'};
+ const c=new AbortController(),t=setTimeout(()=>c.abort(),60000);
+ try{const r=await fetch('https://upload.uploadcare.com/base/',{method:'POST',body:fd,signal:c.signal});if(!r.ok)throw new Error('رفع الصورة فشل ('+r.status+')');
+ const j=await r.json();if(!j.file)throw new Error('رفع الصورة فشل');return UC_CDN+j.file+'/'}
+ catch(e){if(e&&e.name=='AbortError')throw new Error('انتهت المهلة');throw e}finally{clearTimeout(t)}};
 let RPL=null,EDT=null,RDm={},MU={},STK=[],STE=0,REC2=null,DMU=0,DML=[],PMQ='',LP=null,FW=null;
 const CK=['#e67e22','#9b59b6','#16a085','#c0392b','#2980b9','#d35400','#8e44ad','#27ae60'];
 const nc=id=>CK[[...String(id)].reduce((a,c)=>a+c.charCodeAt(0),0)%CK.length];
@@ -268,10 +277,10 @@ function mHtml(m,i){const me=m.sender==ME.id,pv=MS[i-1],dm=isDm(m.room),sd=pv&&n
  if(m.reply_to){const r=MS.find(x=>x.id==m.reply_to),c=nc(r?r.sender:0);rq=`<div class="rq" onclick="jump(${m.reply_to})" style="border-color:${c}"><b style="color:${c}">${r?(r.sender==ME.id?'أنت':esc(nameBy(r.sender))):''}</b><div>${r?esc(prev(r)).slice(0,80):'رسالة'}</div></div>`}
  const st=m.kind=='sticker'&&!m.deleted,rd=me&&dm&&RDm[other(m.room)]>=m.id,tk=me&&!m.deleted?`<span class="tk ${rd?'rd':''}">${rd?'✓✓':'✓'}</span>`:'';
  return h+`<div class="w ${me?'me':''}" id="m${m.id}" data-i="${m.id}"><div class="b ${st?'nb':''}">${!dm&&!me&&first?`<b class="sn" style="color:${nc(m.sender)}">${esc(nameBy(m.sender))}</b>`:''}${m.fwd&&!m.deleted?'<div class="m">↪ متوجّهة</div>':''}${rq}<div>${mBody(m)}</div><span class="mt">${m.edited_at&&!m.deleted?'معدّلة ':''}${tm(m.created_at)} ${tk}</span></div></div>`}
-const msHtml=()=>MS.map(mHtml).join('')||'<p class="m" style="text-align:center;margin-top:30px">لسه مفيش رسايل. ابدأ المحادثة 👋</p>';
+const msHtml=()=>(MS.map(mHtml).join('')+PQ.filter(x=>x.room==curRoom()).map(pendHtml).join(''))||'<p class="m" style="text-align:center;margin-top:30px">لسه مفيش رسايل. ابدأ المحادثة 👋</p>';
 const paintMs=f=>{const e=$('#ms');if(!e)return;if(!f&&[...document.querySelectorAll('audio')].some(a=>!a.paused))return;const bt=f||e.scrollHeight-e.scrollTop-e.clientHeight<140;e.innerHTML=msHtml();if(bt)e.scrollTop=e.scrollHeight;hyd()};
 const upd=m=>{const i=MS.findIndex(x=>x.id==m.id);if(i<0)MS.push(m);else MS[i]=m};
-const own=m=>{if(MS.some(x=>x.id==m.id))return;MS.push(m);const e=$('#ms');if(!e)return;if(MS.length==1)return paintMs(1);const bt=m.sender==ME.id||e.scrollHeight-e.scrollTop-e.clientHeight<140;e.insertAdjacentHTML('beforeend',mHtml(m,MS.length-1));if(bt)e.scrollTop=e.scrollHeight;hyd()};
+const own=m=>{pendMatch(m);if(MS.some(x=>x.id==m.id))return;MS.push(m);const e=$('#ms');if(!e)return;if(MS.length==1)return paintMs(1);const bt=m.sender==ME.id||e.scrollHeight-e.scrollTop-e.clientHeight<140;e.insertAdjacentHTML('beforeend',mHtml(m,MS.length-1));if(bt)e.scrollTop=e.scrollHeight;hyd()};
 const sgn=async p=>{if(isUrl(p))return ucU(p);const c=MU[p];if(c&&Date.now()-c.t<3e6)return c.u;const r=await sb.storage.from('chat-media').createSignedUrl(p,3600),u=r.data?r.data.signedUrl:'x';MU[p]={u,t:Date.now()};return u};
 async function hyd(){for(const e of document.querySelectorAll('[data-p]')){const p=e.dataset.p;e.removeAttribute('data-p');if(!p)continue;const u=await sgn(p);if(u!='x')e.src=u}}
 const view=async p=>{const u=await sgn(p),v=$('#vw'),fu=isUrl(p)?ucU(p)+UC_FULL:u;v.innerHTML=`<img src="${fu}" data-s="${fu}" onerror="ucRetry(this)"><a href="${u}" download target="_blank" onclick="event.stopPropagation()">⬇️ تحميل</a><span class="m">اضغط في أي مكان للإغلاق</span>`;v.style.display='flex';v.onclick=()=>v.style.display='none'};
@@ -297,8 +306,8 @@ const chat=()=>{const o=isDm(V.room)?P.find(x=>x.id==other(V.room)):null;
  return `<div class="ch">${V.back?`<button class="ib" onclick="bk('${V.back}')">›</button>`:''}${o?av(o):`<div class="av">${V.room=='general'?'💬':V.room=='ann'?'📢':'👥'}</div>`}<div class="grow" ${o?`onclick="go({t:'prof',id:'${o.id}'})"`:''}><b>${esc(V.title)}</b><div class="m">${o?RL(o)+(o.department_id?' • '+esc(dn(o.department_id)):''):V.room=='general'?'كل الفريق':V.room=='ann'?'إعلانات الفريق':'شات القسم'}</div></div></div>`+chatBody(V.room)};
 function bk(b){if(!b)return;if(b=='me')openMe();else if(b=='pm')openPm();else{const[k,i]=b.split(':');go(k=='prof'?{t:'prof',id:i}:{t:'dept',id:i})}}
 const openRoom=(room,title,back)=>run(async()=>{if(REC2)recStop(0);if(room=='ann'||room=='vip')try{await sb.rpc('finalize_polls')}catch(e){}
- MS=(await q(sb.from('messages').select('*').eq('room',room).order('id',{ascending:false}).limit(150))).reverse();RPL=null;EDT=null;RDm={};
- try{(await q(sb.from('msg_reads').select('*').eq('room',room))).forEach(x=>RDm[x.reader]=x.last_id)}catch(e){}
+ const[mr,rr]=await Promise.all([q(sb.from('messages').select('*').eq('room',room).order('id',{ascending:false}).limit(150)),q(sb.from('msg_reads').select('*').eq('room',room)).catch(()=>[])]);
+ MS=mr.reverse();RPL=null;EDT=null;RDm={};(rr||[]).forEach(x=>RDm[x.reader]=x.last_id);
  const c=DML.find(x=>x.room==room);V={t:room=='vip'?'vip':'chat',room,title,back};draw();markRead();if(c&&c.un){DMU=Math.max(0,DMU-c.un);c.un=0;drawNav()}});
 const markRead=()=>{const r=curRoom();if(!ME||!isDm(r)||!MS.length)return;const mx=Math.max(...MS.map(x=>x.id));if((RDm[ME.id]||0)>=mx)return;RDm[ME.id]=mx;sb.from('msg_reads').upsert({room:r,reader:ME.id,last_id:mx},{onConflict:'room,reader'}).then(()=>{})};
 let rt;function subRt(){if(rt)return;rt=sb.channel('m').on('postgres_changes',{event:'INSERT',schema:'public',table:'messages'},p=>{const m=p.new,open=m.room==curRoom()&&(V.t=='chat'||V.t=='vip'&&sub=='chat');
@@ -307,11 +316,26 @@ let rt;function subRt(){if(rt)return;rt=sb.channel('m').on('postgres_changes',{e
  .on('postgres_changes',{event:'*',schema:'public',table:'msg_reads'},p=>{const r=p.new;if(r&&r.room==curRoom()&&isDm(r.room)&&r.reader!=ME.id){RDm[r.reader]=r.last_id;paintMs()}}).subscribe()}
 const sendM=()=>{const i=$('#mi'),t=i.value.trim();if(!t)return;i.value='';tg();
  if(EDT){const id=EDT;EDT=null;rb();run(async()=>{const m=await q(sb.from('messages').update({content:t}).eq('id',id).select().single());upd(m);paintMs(1)});return}
- const rp=RPL?RPL.id:null;RPL=null;rb();run(async()=>{own(await q(sb.from('messages').insert({room:curRoom(),content:t,reply_to:rp}).select().single()))})};
+ const rp=RPL?RPL.id:null;RPL=null;rb();pendSend({kind:'text',text:t},room=>q(sb.from('messages').insert({room,content:t,reply_to:rp}).select().single()))};
 /* media */
+/* optimistic sending: show the message at once, confirm or offer retry */
+let PQ=[],PT=0;
+const pendHtml=p=>{const f=p.state=='failed',body=p.kind=='image'&&p.prev?`<img class="mi" src="${p.prev}">`:p.kind=='text'?esc(p.text):esc(p.label||'');
+ return `<div class="w me pend${f?' fail':''}" id="p${p.id}"><div class="b"><div>${body}</div><span class="mt">${f?'⚠️ '+esc(p.err||'فشل الإرسال'):'⏳ بيتبعت...'}</span>${f?`<div class="row" style="gap:12px;margin-top:4px"><b onclick="pendRetry('${p.id}')">🔁 إعادة</b><b onclick="pendDrop('${p.id}')">✕ حذف</b></div>`:''}</div></div>`};
+const pendEl=p=>{const e=$('#ms');if(!e||curRoom()!=p.room)return;const el=document.getElementById('p'+p.id);if(el){el.outerHTML=pendHtml(p);return}if(!MS.length){paintMs(1);return}e.insertAdjacentHTML('beforeend',pendHtml(p));e.scrollTop=e.scrollHeight};
+const pendGone=p=>{const el=document.getElementById('p'+p.id);if(el)el.remove();if(p.prev){try{URL.revokeObjectURL(p.prev)}catch(e){}}};
+const pendMatch=m=>{if(!ME||m.sender!=ME.id)return;const i=PQ.findIndex(p=>p.room==m.room&&p.state=='sending'&&p.kind==(m.kind||'text')&&(p.kind!='text'||p.text==m.content));if(i<0)return;pendGone(PQ.splice(i,1)[0])};
+const pendRun=async p=>{p.state='sending';p.err='';pendEl(p);
+ try{const m=await p.job(p.room);const i=PQ.indexOf(p);if(i<0)return;PQ.splice(i,1);pendGone(p);if(curRoom()==p.room&&$('#ms'))own(m)}
+ catch(e){p.state='failed';p.err=ar(e);if(PQ.includes(p))pendEl(p)}};
+const pendSend=(info,job)=>{const p=Object.assign({id:'t'+(++PT),room:curRoom(),state:'sending',job},info);PQ.push(p);pendRun(p)};
+const pendRetry=id=>{const p=PQ.find(x=>x.id==id);if(p)pendRun(p)};
+const pendDrop=id=>{const i=PQ.findIndex(x=>x.id==id);if(i>=0)pendGone(PQ.splice(i,1)[0])};
 const sendMedia=(b,kind,ext,name,dur)=>{const room=curRoom(),path=room.replace(/:/g,'__')+'/'+crypto.randomUUID()+'.'+ext,rp=RPL?RPL.id:null;RPL=null;rb();
- run(async()=>{let mu=path;if(kind=='image'){mu=await ucUp(b)}else if(kind=='video'){mu=await clUp(b)}else{const{error}=await sb.storage.from('chat-media').upload(path,b,{contentType:(b.type||'application/octet-stream').split(';')[0]});if(error)throw error}
- own(await q(sb.from('messages').insert({room,kind,media_url:mu,file_name:name||null,dur:dur||null,reply_to:rp,media_bytes:(b&&b.size)||null,media_provider:kind=='image'?'uploadcare':kind=='video'?'cloudinary':'supabase'}).select().single()))})};
+ let prev=null;if(kind=='image'){try{prev=URL.createObjectURL(b)}catch(e){}}
+ const label=kind=='video'?'🎬 فيديو '+fb(b.size):kind=='audio'?'🎙️ رسالة صوتية':kind=='file'?'📄 '+(name||'ملف'):'';
+ pendSend({kind,label,prev},async room=>{let mu=path;if(kind=='image'){mu=await ucUp(b)}else if(kind=='video'){mu=await clUp(b)}else{const{error}=await tmo(sb.storage.from('chat-media').upload(path,b,{contentType:(b.type||'application/octet-stream').split(';')[0]}),60000);if(error)throw error}
+ return q(sb.from('messages').insert({room,kind,media_url:mu,file_name:name||null,dur:dur||null,reply_to:rp,media_bytes:(b&&b.size)||null,media_provider:kind=='image'?'uploadcare':kind=='video'?'cloudinary':'supabase'}).select().single())})};
 const pick=(f,k)=>{closeSh();if(!f)return;if(k=='video'&&f.size>MAXV)return toast('الفيديو أكبر من 20 ميجا. صوّر بجودة أقل أو قصّه');if(f.size>MAXM)return toast('الحجم أكبر من 50 ميجا (أقصى حد في Supabase المجاني)');const ext=((f.name.split('.').pop()||'bin').toLowerCase().replace(/[^a-z0-9]/g,'').slice(0,5))||'bin';
  if(k=='image'){if(f.type=='image/gif'&&f.size<=3e6)sendMedia(f,'image','gif');else rs(f,1280,b=>sendMedia(b,'image','jpg'))}else sendMedia(f,k,ext,f.name)};
 const attach=()=>sheet(`<label class="it">🖼️ صورة من المعرض<input type="file" accept="image/*" hidden onchange="pick(this.files[0],'image')"></label><label class="it">🎞️ فيديو من المعرض<input type="file" accept="video/*" hidden onchange="pick(this.files[0],'video')"></label><label class="it">📷 كاميرا (صورة)<input type="file" accept="image/*" capture="environment" hidden onchange="pick(this.files[0],'image')"></label><label class="it">🎥 كاميرا (فيديو)<input type="file" accept="video/*" capture="environment" hidden onchange="pick(this.files[0],'video')"></label><label class="it">📄 ملف<input type="file" hidden onchange="pick(this.files[0],'file')"></label>`);
@@ -325,10 +349,14 @@ function recStop(snd){const r=REC2;if(!r)return;REC2=null;clearInterval(r.iv);co
 const EMS=['😀','😂','🤣','😍','🥰','😎','🤩','😭','😡','🥳','😴','🤔','🙏','👍','👏','💪','🔥','❤️','💔','🎉','✅','❌','⭐','💯','🤝','👋','🙈','😱','🥺','😅','😇','🤗'];
 const loadStk=async()=>{try{STK=await q(sb.from('stickers').select('*').order('created_at',{ascending:false}))}catch(e){STK=[]}};
 const stkTray=()=>run(async()=>{await loadStk();stkDraw()});
-function stkDraw(){sheet(`<div class="sg">${EMS.map(e=>`<span class="se" onclick="sendStk(null,'${e}')">${e}</span>`).join('')}</div><h3>استيكراتي (GIF / WebP متحرك / PNG)</h3><div class="sg">${STK.map(s=>`<span class="ss"><img src="${esc(s.url)}" onclick="sendStk('${esc(s.url)}')">${STE?`<b onclick="delStk('${s.id}')">✕</b>`:''}</span>`).join('')}<label class="se add">➕<input type="file" accept="image/gif,image/webp,image/png,image/jpeg" hidden onchange="addStk(this.files[0])"></label></div><button class="it" onclick="STE=!STE;stkDraw()">${STE?'تم':'تعديل / حذف استيكرات'}</button>`)}
+function stkDraw(){sheet(`<div class="sg">${EMS.map(e=>`<span class="se" onclick="sendStk(null,'${e}')">${e}</span>`).join('')}</div><h3>استيكراتي (GIF / WebP متحرك / PNG)</h3><div class="sg">${STK.map(s=>`<span class="ss"><img src="${esc(s.url)}" loading="lazy" decoding="async" onclick="sendStk('${esc(s.url)}')">${STE?`<b onclick="delStk('${s.id}')">✕</b>`:''}</span>`).join('')}<label class="se add">➕<input type="file" accept="image/gif,image/webp,image/png,image/jpeg" hidden onchange="addStk(this.files[0])"></label></div><button class="it" onclick="STE=!STE;stkDraw()">${STE?'تم':'تعديل / حذف استيكرات'}</button>`)}
 const sendStk=(u,e)=>{closeSh();const rp=RPL?RPL.id:null;RPL=null;rb();run(async()=>{own(await q(sb.from('messages').insert({room:curRoom(),kind:'sticker',media_url:u||null,content:u?null:e,reply_to:rp}).select().single()))})};
-const addStk=f=>{if(!f)return;if(f.size>MAXS)return toast('الاستيكر أكبر من 50 ميجا (أقصى حد في Supabase المجاني)');const ext=(f.type.split('/')[1]||'png').replace('jpeg','jpg'),path='stickers/'+U.id+'/'+crypto.randomUUID()+'.'+ext;
- run(async()=>{const{error}=await sb.storage.from('public-assets').upload(path,f,{contentType:f.type});if(error)throw error;await q(sb.from('stickers').insert({owner:ME.id,url:sb.storage.from('public-assets').getPublicUrl(path).data.publicUrl}));await loadStk();stkDraw();toast('اتحفظ الاستيكر ✅')})};
+const addStk=f=>{if(!f)return;if(f.size>MAXS)return toast('الاستيكر أكبر من 50 ميجا (أقصى حد في Supabase المجاني)');
+ const go2=(b,ext)=>{const path='stickers/'+U.id+'/'+crypto.randomUUID()+'.'+ext;
+ run(async()=>{const{error}=await tmo(sb.storage.from('public-assets').upload(path,b,{contentType:b.type||'image/'+ext,cacheControl:'31536000'}),60000);if(error)throw error;await q(sb.from('stickers').insert({owner:ME.id,url:sb.storage.from('public-assets').getPublicUrl(path).data.publicUrl}));await loadStk();stkDraw();toast('اتحفظ الاستيكر ✅')})};
+ if(f.type=='image/gif'&&f.size<=2e6)return go2(f,'gif');
+ if(f.type=='image/gif')toast('الـ GIF كبير، هيتحفظ كصورة ثابتة');
+ rs(f,512,b=>go2(b,(b.type.split('/')[1]||'png')),{alpha:true,fmt:'webp'})};
 const svStk=id=>run(async()=>{const m=MS.find(x=>x.id==id);await q(sb.from('stickers').upsert({owner:ME.id,url:m.media_url},{onConflict:'owner,url',ignoreDuplicates:true}));toast('اتحفظ في استيكراتك ⭐')});
 const delStk=id=>run(async()=>{await q(sb.from('stickers').delete().eq('id',id));await loadStk();stkDraw()});
 /* forward */
@@ -354,7 +382,7 @@ function pml(){const qq=PMQ.trim(),ok=x=>!qq||x.full_name.includes(qq);
 const pmv=()=>`<h2>🔒 الشات الخاص</h2><input id="pq" placeholder="🔍 دوّر على اسم..." value="${esc(PMQ)}" oninput="PMQ=this.value;$('#pl').innerHTML=pml()"><div id="pl">${pml()}</div>`;
 let AIADM=false,AP=[],AEV=[],AT={},AL=0,ASUM='',AMOD={},AMREQ={},AKB=[];
 const aiAdm=()=>sb.rpc('is_ai_admin').then(r=>{AIADM=!!r.data}).catch(()=>{});
-const aiCall=async body=>{const{data,error}=await sb.functions.invoke('ai-chat2',{body});if(error){let m='حصل خطأ. جرّب تاني.';try{const j=await error.context.json();if(j.error)m=j.error}catch(e){}throw new Error(m)}return data};
+const aiCall=async body=>{const{data,error}=await inv('ai-chat2',{body},90000);if(error){let m='حصل خطأ. جرّب تاني.';try{const j=await error.context.json();if(j.error)m=j.error}catch(e){}throw new Error(m)}return data};
 const aiLoad=()=>run(async()=>{try{const d=await aiCall({action:'list'});AP=d.providers||[];AEV=d.env||[];if(AIADM){const k=await aiCall({action:'kb_list'});AKB=k.items||[]}}catch(e){toast(e.message)}draw()});
 const KL={auto:'تلقائي',groq:'Groq',github:'GitHub Models',cloudflare:'Cloudflare Workers AI',openrouter:'OpenRouter',mistral:'Mistral',custom:'مخصص (متوافق مع OpenAI)',openai:'OpenAI',deepseek:'DeepSeek',xai:'xAI (Grok)',cerebras:'Cerebras',sambanova:'SambaNova',together:'Together AI',fireworks:'Fireworks AI',huggingface:'Hugging Face',nvidia:'NVIDIA NIM',perplexity:'Perplexity',moonshot:'Moonshot (Kimi)',cohere:'Cohere',anthropic:'Anthropic (Claude)',tavily:'Tavily (بحث على الإنترنت)',brave:'Brave Search (بحث على الإنترنت)'};
 const LBL=k=>KL[k]||k;
