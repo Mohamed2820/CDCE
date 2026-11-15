@@ -607,10 +607,10 @@ const typeChan=()=>{if(TYCH||!ME||!U)return;try{TYCH=sb.channel('cdce-typing').o
 setInterval(typeChan,3000);
 document.addEventListener('input',e=>{if(!e.target||e.target.id!='mi'||!TYCH||!ME||!isDm(V.room))return;const t=Date.now();if(t-TYLAST>2500){TYLAST=t;try{TYCH.send({type:'broadcast',event:'typing',payload:{id:ME.id,room:V.room}})}catch(err){}}});
 /* ===== ↩️ زر الرجوع بتاع الموبايل: بيرجّع خطوة لورا داخل التطبيق ===== */
-let HKEY=null,HRST=false;
+let HKEY=null,HRST=false,HDEP=0;
 const hState=()=>({t:V.t||null,id:V.id||null,room:V.room||null,title:V.title||null,back:V.back||null,sub:(typeof sub!=='undefined'?sub:null),ss:(typeof ss!=='undefined'?ss:null),shCur:(typeof SH!=='undefined'&&SH.cur)||null,anId:(typeof AN!=='undefined'&&AN.id)||null});
 const hKey=st=>JSON.stringify(st);
-const histSync=()=>{if(HRST||!ME||!U)return;const st=hState(),k=hKey(st);if(k===HKEY)return;HKEY=k;if(history.state&&history.state.cdce)history.pushState({cdce:st},'');else history.replaceState({cdce:st},'')};
+const histSync=()=>{if(HRST||!ME||!U)return;const st=hState(),k=hKey(st);if(k===HKEY)return;HKEY=k;if(history.state&&history.state.cdce){history.pushState({cdce:st},'');HDEP++}else history.replaceState({cdce:st},'')};
 const closeTopOverlay=()=>{if($('#nav').classList.contains('open')){closeDr();return true}
  if($('#cdlg').className=='on'){const b=$('#cdn');b&&b.click();return true}
  if($('#sh').style.display=='flex'){closeSh();return true}
@@ -633,11 +633,14 @@ const restoreState=async st=>{V={t:st.t,id:st.id,room:st.room,title:st.title,bac
 addEventListener('popstate',e=>{if(!ME||!U)return;
  if(closeTopOverlay()){HRST=true;try{history.pushState({cdce:hState()},'')}finally{HRST=false}HKEY=hKey(hState());return}
  const st=e.state&&e.state.cdce;if(!st)return;
- HRST=true;HKEY=hKey(st);
+ HDEP=Math.max(0,HDEP-1);HRST=true;HKEY=hKey(st);
  restoreState(st).finally(()=>{HKEY=hKey(hState());HRST=false});
 });
 const _drawBase=draw;
 draw=function(){_drawBase.apply(this,arguments);try{histSync()}catch(e){}};
+/* ===== 📱 زرار الرجوع الفعلي في تطبيق الأندرويد ===== */
+(function(){try{const AP=window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.App;if(!AP||!AP.addListener)return;
+ AP.addListener('backButton',()=>{if(closeTopOverlay())return;if(HDEP>0&&ME){history.back()}else{AP.exitApp&&AP.exitApp()}})}catch(e){}})();
 const TSTEP={
  home:{ic:'🏠',t:'الرئيسية',te:'Home',x:'دي صفحة الفريق: نبذة عننا وتاريخنا وقايدنا ولينكاتنا وكود الـ QR بتاعنا.',xe:'This is the team page: about us, our history, our leader, our links and our QR code.',sel:()=>cardByH('نبذة عنا')||'#v>*:nth-child(2)'},
  depts:{ic:'👥',t:'الأقسام',te:'Departments',x:'هنا كل أقسام ولجان الفريق. دوس على أي قسم تشوف أعضاءه، ولو أنت منه تدخل شات القسم.',xe:'All the team departments and committees. Tap one to see its members, and open its chat if you belong to it.',sel:'#v .card'},
