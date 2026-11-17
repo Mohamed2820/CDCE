@@ -19,11 +19,60 @@ jobs:
           echo '<!doctype html><html><body></body></html>' > app/www/index.html
           cd app
           npm init -y
-          npm i @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6 @capacitor/push-notifications@6 @capacitor/filesystem@6 @capacitor/share@6 @capacitor/app@6
+          npm i @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6 @capacitor/push-notifications@6 @capacitor/filesystem@6 @capacitor/share@6
           echo '{"appId":"com.cdce.team","appName":"CDCE","webDir":"www","server":{"url":"https://mohamed2820.github.io/CDCE/","androidScheme":"https"}}' > capacitor.config.json
           npx cap add android
           npx cap sync android
           sed -i 's#</manifest>#<uses-permission android:name="android.permission.RECORD_AUDIO" /><uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" /><uses-permission android:name="android.permission.CAMERA" /><uses-permission android:name="android.permission.POST_NOTIFICATIONS" /></manifest>#' android/app/src/main/AndroidManifest.xml
+      - name: Install native back handler
+        run: |
+          mkdir -p app/android/app/src/main/java/com/cdce/team
+          cat > app/android/app/src/main/java/com/cdce/team/MainActivity.java <<'EOF'
+          package com.cdce.team;
+
+          import android.os.Bundle;
+          import android.webkit.ValueCallback;
+          import com.getcapacitor.BridgeActivity;
+
+          public class MainActivity extends BridgeActivity {
+
+              @Override
+              public void onResume() {
+                  super.onResume();
+                  // Tell the web page the native back button is wired (shown in settings)
+                  if (getBridge() != null && getBridge().getWebView() != null) {
+                      getBridge().getWebView().postDelayed(new Runnable() {
+                          @Override
+                          public void run() {
+                              if (getBridge() != null && getBridge().getWebView() != null) {
+                                  getBridge().getWebView().evaluateJavascript("window.__cdceNative=true", null);
+                              }
+                          }
+                      }, 2500);
+                  }
+              }
+
+              @Override
+              public void onBackPressed() {
+                  if (getBridge() == null || getBridge().getWebView() == null) {
+                      super.onBackPressed();
+                      return;
+                  }
+                  getBridge().getWebView().evaluateJavascript(
+                      "(function(){try{return (window.__cdceBackPress && window.__cdceBackPress()) ? 'yes' : 'no';}catch(e){return 'no';}})()",
+                      new ValueCallback<String>() {
+                          @Override
+                          public void onReceiveValue(String value) {
+                              // value arrives JSON-encoded, e.g. "\"yes\""
+                              if (value != null && (value.contains("yes"))) {
+                                  return; // page went one step back, stay in app
+                              }
+                              moveTaskToBack(true); // no step back left: send app to background
+                          }
+                      });
+              }
+          }
+          EOF
       - name: Add Firebase config
         env:
           GOOGLE_SERVICES: ${{ secrets.GOOGLE_SERVICES_JSON }}

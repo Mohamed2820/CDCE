@@ -638,9 +638,12 @@ addEventListener('popstate',e=>{if(!ME||!U)return;
 });
 const _drawBase=draw;
 draw=function(){_drawBase.apply(this,arguments);try{histSync()}catch(e){}};
-/* ===== 📱 زرار الرجوع الفعلي في تطبيق الأندرويد ===== */
-var NATIVE_BACK=false;const BUILD='2026-11-15-b3';const PLG=(()=>{try{const k=Object.keys((window.Capacitor&&window.Capacitor.Plugins)||{});return k.length?k.join(', '):'ولا واحدة'}catch(e){return 'خطأ'}})();const IS_APP=!!(window.Capacitor&&typeof window.Capacitor.isNativePlatform=='function'&&window.Capacitor.isNativePlatform());
-(function hwBack(tries){try{const AP=window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.App;if(AP&&AP.addListener){AP.addListener('backButton',()=>{if(closeTopOverlay())return;if(HDEP>0&&ME){history.back()}else{AP.exitApp&&AP.exitApp()}});NATIVE_BACK=true;return}}catch(e){}if(tries<60)setTimeout(()=>hwBack(tries+1),300)})(0);
+/* ===== 📱 زرار الرجوع في تطبيق الأندرويد =====
+   الكود الأصلي (MainActivity) بينادي window.__cdceBackPress() ويقول لو فيه خطوة لورا.
+   لو رجع true: الصفحة اتعاملت مع الرجوع. لو false: التطبيق يتقفل/يترجع للخلفية. */
+var BUILD='2026-11-15-n1';
+const IS_APP=!!(window.Capacitor&&typeof window.Capacitor.isNativePlatform=='function'&&window.Capacitor.isNativePlatform());
+window.__cdceBackPress=function(){try{if(closeTopOverlay())return true;if(HDEP>0&&ME){history.back();return true}return false}catch(e){return false}};
 const TSTEP={
  home:{ic:'🏠',t:'الرئيسية',te:'Home',x:'دي صفحة الفريق: نبذة عننا وتاريخنا وقايدنا ولينكاتنا وكود الـ QR بتاعنا.',xe:'This is the team page: about us, our history, our leader, our links and our QR code.',sel:()=>cardByH('نبذة عنا')||'#v>*:nth-child(2)'},
  depts:{ic:'👥',t:'الأقسام',te:'Departments',x:'هنا كل أقسام ولجان الفريق. دوس على أي قسم تشوف أعضاءه، ولو أنت منه تدخل شات القسم.',xe:'All the team departments and committees. Tap one to see its members, and open its chat if you belong to it.',sel:'#v .card'},
@@ -1043,7 +1046,7 @@ const setTheme=v=>{prefSet('cdce_theme',v);const d=document.documentElement;if(v
 const setFx=v=>{prefSet('cdce_fx',v);document.documentElement.dataset.fx=v;draw()};
 const setLang=v=>{prefSet('cdce_lang',v);LANG=v;applyLang();draw()};
 const sLook=()=>{const th=prefGet('cdce_theme')||'auto',fx=prefGet('cdce_fx')||'bal',o=(on,l,f)=>`<button class="btn ${on?'':'o'}" style="flex:1;padding:10px 6px;box-shadow:none" onclick="${f}">${l}</button>`;
- return `<div class="card"><p class="m" style="margin:0">نسخة الواجهة: ${BUILD}<br>${IS_APP?'تطبيق أندرويد':'متصفح'} • زرار الرجوع: ${NATIVE_BACK?'✅ مفعّل':'❌ مش مفعّل'}<br><span style="font-size:11px">الإضافات الظاهرة: ${PLG}</span></p></div><div class="card"><h3>🌗 الثيم</h3><div class="row" style="gap:8px">${o(th=='auto','تلقائي',"setTheme('auto')")}${o(th=='light','☀️ فاتح',"setTheme('light')")}${o(th=='dark','🌙 غامق',"setTheme('dark')")}</div></div>
+ return `<div class="card"><p class="m" style="margin:0">نسخة الواجهة: ${BUILD}<br>${IS_APP?'تطبيق أندرويد':'متصفح'} • زرار الرجوع: ${window.__cdceNative?'✅ مفعّل':'❌ مش مفعّل'}</p></div><div class="card"><h3>🌗 الثيم</h3><div class="row" style="gap:8px">${o(th=='auto','تلقائي',"setTheme('auto')")}${o(th=='light','☀️ فاتح',"setTheme('light')")}${o(th=='dark','🌙 غامق',"setTheme('dark')")}</div></div>
 <div class="card"><h3>🌐 اللغة</h3><div class="row" style="gap:8px">${o(LANG=='ar','العربية',"setLang('ar')")}${o(LANG=='en','English',"setLang('en')")}</div></div>
 <div class="card"><h3>✨ الحركة والتأثيرات</h3><div class="row" style="gap:8px">${o(fx=='full','كاملة',"setFx('full')")}${o(fx=='bal','متوازنة',"setFx('bal')")}${o(fx=='off','خفيفة',"setFx('off')")}</div><p class="m">«كاملة» بتفعّل الضبابية والحركة الكاملة وممكن تبطّأ على التليفونات الضعيفة. «متوازنة» هي الافتراضية. «خفيفة» بتوقف الأنيميشن والأيقونات العايمة.</p></div>`};
 applyLang();
