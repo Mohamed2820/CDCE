@@ -32,14 +32,46 @@ jobs:
 
           import android.os.Bundle;
           import android.webkit.ValueCallback;
+          import android.webkit.WebView;
+          import androidx.activity.OnBackPressedCallback;
           import com.getcapacitor.BridgeActivity;
 
           public class MainActivity extends BridgeActivity {
 
+              private static final String BACK_JS =
+                  "(function(){try{return (window.__cdceBackPress && window.__cdceBackPress()) ? 'yes' : 'no';}catch(e){return 'no';}})()";
+
+              @Override
+              public void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  // Register AFTER Capacitor's own callback, so ours runs first (last-added wins).
+                  // This works on Android 13+ (predictive back) where onBackPressed() is not called.
+                  getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+                      @Override
+                      public void handleOnBackPressed() {
+                          if (getBridge() == null || getBridge().getWebView() == null) {
+                              moveTaskToBack(true);
+                              return;
+                          }
+                          WebView wv = getBridge().getWebView();
+                          wv.evaluateJavascript(BACK_JS, new ValueCallback<String>() {
+                              @Override
+                              public void onReceiveValue(String value) {
+                                  // value is JSON-encoded, e.g. "\"yes\""
+                                  if (value != null && value.contains("yes")) {
+                                      return; // the page went one step back: stay in the app
+                                  }
+                                  moveTaskToBack(true); // no step left: send app to background
+                              }
+                          });
+                      }
+                  });
+              }
+
               @Override
               public void onResume() {
                   super.onResume();
-                  // Tell the web page the native back button is wired (shown in settings)
+                  // Tell the page the native handler is wired (shown in settings)
                   if (getBridge() != null && getBridge().getWebView() != null) {
                       getBridge().getWebView().postDelayed(new Runnable() {
                           @Override
@@ -50,26 +82,6 @@ jobs:
                           }
                       }, 2500);
                   }
-              }
-
-              @Override
-              public void onBackPressed() {
-                  if (getBridge() == null || getBridge().getWebView() == null) {
-                      super.onBackPressed();
-                      return;
-                  }
-                  getBridge().getWebView().evaluateJavascript(
-                      "(function(){try{return (window.__cdceBackPress && window.__cdceBackPress()) ? 'yes' : 'no';}catch(e){return 'no';}})()",
-                      new ValueCallback<String>() {
-                          @Override
-                          public void onReceiveValue(String value) {
-                              // value arrives JSON-encoded, e.g. "\"yes\""
-                              if (value != null && (value.contains("yes"))) {
-                                  return; // page went one step back, stay in app
-                              }
-                              moveTaskToBack(true); // no step back left: send app to background
-                          }
-                      });
               }
           }
           EOF
