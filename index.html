@@ -637,7 +637,7 @@ addEventListener('popstate',e=>{if(!ME||!U)return;
  restoreState(st).finally(()=>{HKEY=hKey(hState());HRST=false});
 });
 const _drawBase=draw;
-draw=function(){_drawBase.apply(this,arguments);try{histSync()}catch(e){}};
+draw=function(){_drawBase.apply(this,arguments);try{histSync();decorateChat();applyWall()}catch(e){}};
 /* ===== 📱 زرار الرجوع في تطبيق الأندرويد =====
    الكود الأصلي (MainActivity) بينادي window.__cdceBackPress() ويقول لو فيه خطوة لورا.
    لو رجع true: الصفحة اتعاملت مع الرجوع. لو false: التطبيق يتقفل/يترجع للخلفية. */
@@ -650,6 +650,36 @@ const pushRegister=async()=>{try{const t=window.__cdcePushToken;if(!t||!ME||!U||
 window.__cdcePushReady=pushRegister;
 setTimeout(pushRegister,5000);
 setInterval(pushRegister,60000);
+/* ===== ⚙️ خيارات الشات الخاص (على الجهاز) ===== */
+const PREFS=()=>{try{return JSON.parse(lg('cdce_chatprefs')||'{}')}catch(e){return {}}};
+const chatPref=(room,k)=>((PREFS()[room]||{})[k]);
+const setChatPref=(room,k,v)=>{const p=PREFS();p[room]=p[room]||{};p[room][k]=v;ls('cdce_chatprefs',JSON.stringify(p))};
+const WALLS=['','linear-gradient(135deg,#1e2a4a,#3b1d5e)','linear-gradient(135deg,#0f3d2e,#12303f)','linear-gradient(135deg,#3a1d1d,#4a2f0b)','linear-gradient(135deg,#1b1b2f,#162447)'];
+const applyWall=()=>{const m=document.getElementById('ms');if(!m||!V.room)return;const w=chatPref(V.room,'wall');m.style.background=WALLS[w||0]||''};
+const decorateChat=()=>{const h=document.querySelector('.ch');if(!h)return;const dm=V.t=='chat'&&isDm(V.room);let b=document.getElementById('dmbtn');if(!dm){if(b)b.remove();return}if(!b){b=document.createElement('button');b.id='dmbtn';b.className='ib';b.textContent='⋮';b.setAttribute('aria-label','خيارات المحادثة');b.onclick=dmMenu;h.appendChild(b)}};
+const dmMenu=()=>{const r=V.room,o=P.find(x=>x.id==other(r)),pin=!!chatPref(r,'pinned'),mut=!!chatPref(r,'mute');
+ sheet(`<h3>${esc(o?o.full_name:V.title)}</h3>
+ <button class="it" onclick="closeSh();go({t:'prof',id:'${o?o.id:''}'})">👤 معلومات الشخص</button>
+ <button class="it" onclick="closeSh();dmSearchOpen()">🔍 بحث في المحادثة</button>
+ <button class="it" onclick="closeSh();dmToggle('mute')">${mut?'🔔 إلغاء الكتم':'🔕 كتم الإشعارات'}</button>
+ <button class="it" onclick="closeSh();dmToggle('pinned')">${pin?'📌 إلغاء التثبيت':'📌 تثبيت المحادثة فوق'}</button>
+ <button class="it" onclick="closeSh();dmWallOpen()">🎨 تغيير الخلفية</button>
+ <button class="it" onclick="closeSh();dmTop()">⬆️ الانتقال لأول رسالة</button>
+ <button class="it" onclick="closeSh();dmClear()">🧹 مسح المحادثة (عندي بس)</button>
+ <button class="it" style="color:var(--r)" onclick="closeSh();dmHide()">🗑️ حذف المحادثة (عندي بس)</button>`)};
+const dmToggle=k=>{setChatPref(V.room,k,!chatPref(V.room,k));draw();toast(chatPref(V.room,k)?'تم ✅':'اتلغى')};
+const dmTop=()=>{const m=document.getElementById('ms');if(m)m.scrollTop=0};
+const dmWallOpen=()=>sheet(`<h3>🎨 الخلفية</h3><div class="sg">${WALLS.map((w,i)=>`<button class="it" style="display:inline-block;width:auto;padding:10px 14px" onclick="setWall(${i})"><span style="display:inline-block;width:40px;height:40px;border-radius:12px;vertical-align:middle;background:${w||'var(--c)'};border:1px solid var(--b)"></span> ${i==0?'افتراضي':'لون '+i}</button>`).join('')}</div>`);
+const setWall=i=>{setChatPref(V.room,'wall',i);applyWall();closeSh();toast('اتغيرت الخلفية ✅')};
+let DMQ={q:'',hits:[],at:0};
+const dmSearchOpen=()=>sheet(`<h3>🔍 بحث في المحادثة</h3><input id="dmq" placeholder="اكتب الكلمة..." value="${esc(DMQ.q)}"><button class="btn" style="width:100%" onclick="dmSearch()">بحث</button>`);
+const dmSearch=()=>{const q=(($('#dmq')||{}).value||'').trim().toLowerCase();closeSh();document.querySelectorAll('#ms .w.hl').forEach(e=>e.classList.remove('hl'));if(!q){DMQ={q:'',hits:[],at:0};return}
+ if(q!==DMQ.q){DMQ={q,hits:[...document.querySelectorAll('#ms .w')].filter(e=>e.textContent.toLowerCase().includes(q)),at:0}}else{DMQ.at=(DMQ.at+1)%Math.max(1,DMQ.hits.length)}
+ if(!DMQ.hits.length){toast('مفيش نتايج');return}
+ const el=DMQ.hits[DMQ.at];el.classList.add('hl');try{el.scrollIntoView({block:'center',behavior:'smooth'})}catch(e){}
+ toast(`${DMQ.at+1} من ${DMQ.hits.length}`)};
+const dmClear=async()=>{if(!await uiConfirm('مسح المحادثة عندك بس؟ الرسايل هتفضل عند الطرف التاني.'))return;setChatPref(V.room,'clearedAt',new Date().toISOString());openRoom(V.room,V.title,V.back)};
+const dmHide=async()=>{if(!await uiConfirm('حذف المحادثة من عندك؟ هترجع لما يجيلك رسالة جديدة.'))return;setChatPref(V.room,'hiddenAt',new Date().toISOString());openPm()};
 const TSTEP={
  home:{ic:'🏠',t:'الرئيسية',te:'Home',x:'دي صفحة الفريق: نبذة عننا وتاريخنا وقايدنا ولينكاتنا وكود الـ QR بتاعنا.',xe:'This is the team page: about us, our history, our leader, our links and our QR code.',sel:()=>cardByH('نبذة عنا')||'#v>*:nth-child(2)'},
  depts:{ic:'👥',t:'الأقسام',te:'Departments',x:'هنا كل أقسام ولجان الفريق. دوس على أي قسم تشوف أعضاءه، ولو أنت منه تدخل شات القسم.',xe:'All the team departments and committees. Tap one to see its members, and open its chat if you belong to it.',sel:'#v .card'},
@@ -792,7 +822,7 @@ const pySave=id=>run(async()=>{const x=P.find(y=>y.id==id),v=$('#pr').value,d=$(
 const pyAdd=(r,did)=>{const d=RD.find(z=>z.id==did),nm=d?d.name:RN[RKS[r]];sheet(`<h3>إضافة ${esc(nm)} جديد</h3><div class="m">القسم</div><select id="ad">${DEP.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('')}</select><input id="al" placeholder="اسم الشخص (للتذكير)"><button class="btn g" style="width:100%" onclick="pyCode(${r},'${did||''}')">إنشاء كود الدعوة</button><div id="ak"></div>`)};
 const pyCode=(r,did)=>run(async()=>{const d=RD.find(z=>z.id==did),c=await q(sb.rpc('make_code',{r:RKS[r],d:$('#ad').value,lbl:$('#al').value||(d?d.name:null),rd:did||null}));$('#ak').innerHTML=`<div style="text-align:center;margin-top:10px"><div style="font-size:24px;font-weight:800;letter-spacing:3px;direction:ltr">${c}</div><p class="m">ادّي الكود ده للشخص. هيسجّل برتبة ${esc(d?d.name:RN[RKS[r]])} مباشرة.</p><button class="btn o" onclick="try{navigator.clipboard.writeText('${c}');toast('اتنسخ')}catch(e){}">نسخ</button></div>`});
 const can=x=>hc('give_points',n(ME)>=3)&&(n(ME)>=3?n(ME)>n(x):true)&&x.id!=ME.id&&!x.is_memorial&&x.rank!='leader';
-const pbody=x=>`<div class="card" style="text-align:center;position:relative">${canAn(x)?`<button class="anb" onclick="anOpen('${x.id}')" aria-label="تحليل"><span>📊</span><i>تحليل</i></button>`:''}${av(x,'big')}<h2 style="margin-top:10px">${esc(x.full_name)}</h2>
+const pbody=x=>`<div class="card" style="text-align:center;position:relative">${canAn(x)?`<button class="anb" onclick="anOpen('${x.id}')" aria-label="تحليل"><span>📊</span><i>تحليل</i></button>`:''}${av(x,'big')}<h2 style="margin-top:10px">${esc(x.full_name)}</h2>${x.is_memorial?'':`<div class="m" data-pres="${x.id}" style="font-size:13px;margin:2px 0 10px">${presHTML(x)}</div>`}
  ${x.is_memorial?`<span class="tag">🕊️ ليدر سابق - الصفحة لإحياء ذكراه</span>${x.title?`<span class="tag">${esc(x.title)}</span>`:''}`:`<span class="tag">${RL(x)}</span>${x.department_id?`<span class="tag">${esc(dn(x.department_id))}</span>`:''}${pts(x)}`}</div>
  ${x.is_memorial?'':`<div class="card"><h3>اللقب (الشهرة)</h3><p>${esc(x.title||'لسه ما اتحددش')}</p><p class="m">اللقب بيحدده الليدر والهيدات.</p>
  <h3>الكلية والفرقة</h3><p>${esc(x.college||'-')} • ${esc(x.year_status||'-')}</p><h3>أقدر أقدم للفريق</h3><p>${esc(x.offer||'-')}</p></div>`}`;
@@ -876,7 +906,7 @@ const chat=()=>{const o=isDm(V.room)?P.find(x=>x.id==other(V.room)):null;
 function bk(b){if(!b)return;if(b=='me')openMe();else if(b=='pm')openPm();else{const[k,i]=b.split(':');go(k=='prof'?{t:'prof',id:i}:{t:'dept',id:i})}}
 const openRoom=(room,title,back)=>run(async()=>{if(REC2)recStop(0);if(room=='ann'||room=='vip')try{await sb.rpc('finalize_polls')}catch(e){}
  let mr,rr;try{[mr,rr]=await Promise.all([q(sb.from('messages').select('*').eq('room',room).order('id',{ascending:false}).limit(150)),q(sb.from('msg_reads').select('*').eq('room',room)).catch(()=>[])]);msgSave(room,mr)}catch(e){if(!isNetErr(e))throw e;const c=msgGet(room);setOffline(true);mr=c?c.slice().reverse():[];rr=[]}
- MS=mr.reverse();RPL=null;EDT=null;RDm={};(rr||[]).forEach(x=>RDm[x.reader]=x.last_id);
+ MS=mr.reverse().filter(m=>{const c=chatPref(room,'clearedAt');return !c||new Date(m.created_at)>new Date(c)});RPL=null;EDT=null;RDm={};(rr||[]).forEach(x=>RDm[x.reader]=x.last_id);
  const c=DML.find(x=>x.room==room);V={t:room=='vip'?'vip':'chat',room,title,back};draw();markRead();if(c&&c.un){DMU=Math.max(0,DMU-c.un);c.un=0;drawNav()}});
 const markRead=()=>{const r=curRoom();if(!ME||!isDm(r)||!MS.length)return;const mx=Math.max(...MS.map(x=>x.id));if((RDm[ME.id]||0)>=mx)return;RDm[ME.id]=mx;sb.from('msg_reads').upsert({room:r,reader:ME.id,last_id:mx},{onConflict:'room,reader'}).then(()=>{})};
 let rt;function subRt(){if(rt)return;rt=sb.channel('m').on('postgres_changes',{event:'INSERT',schema:'public',table:'messages'},p=>{const m=p.new,open=m.room==curRoom()&&(V.t=='chat'||V.t=='vip'&&sub=='chat');
@@ -945,7 +975,7 @@ const pmLoad=async()=>{const r=await q(sb.from('messages').select('id,room,sende
 const unreadInit=()=>pmLoad().then(drawNav).catch(()=>{});
 const openPm=()=>run(async()=>{try{await pmLoad()}catch(e){if(!isNetErr(e))throw e;setOffline(true)}V={t:'pm'};draw()});
 function pml(){const qq=PMQ.trim(),ok=x=>!qq||x.full_name.includes(qq);
- const rc=DML.map(d=>({d,o:P.find(x=>x.id==other(d.room))})).filter(x=>x.o&&ok(x.o)).sort((a,b)=>b.d.last.id-a.d.last.id).map(({d,o})=>`<div class="card row" onclick="opn('${o.id}')"><div style="position:relative;flex:none">${av(o)}<span class="pdot${onlineNow(o)?' on':''}" data-pdot="${o.id}"></span></div><div class="grow" style="min-width:0"><b>${esc(o.full_name)}</b><div class="m" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.last.sender==ME.id?'أنت: ':''}${esc(prev(d.last)).slice(0,40)}</div></div><div style="text-align:end"><div class="m">${tm(d.last.created_at)}</div>${d.un?`<span class="bg2">${d.un}</span>`:''}</div></div>`).join('');
+ const rc=DML.filter(d=>{const h=chatPref(d.room,'hiddenAt');return !h||new Date(d.last.created_at)>new Date(h)}).map(d=>({d,o:P.find(x=>x.id==other(d.room))})).filter(x=>x.o&&ok(x.o)).sort((a,b)=>(!!chatPref(b.d.room,'pinned')-!!chatPref(a.d.room,'pinned'))||(b.d.last.id-a.d.last.id)).map(({d,o})=>`<div class="card row" onclick="opn('${o.id}')"><div style="position:relative;flex:none">${av(o)}<span class="pdot${onlineNow(o)?' on':''}" data-pdot="${o.id}"></span></div><div class="grow" style="min-width:0"><b>${esc(o.full_name)}</b><div class="m" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.last.sender==ME.id?'أنت: ':''}${esc(prev(d.last)).slice(0,40)}</div></div><div style="text-align:end"><div class="m">${tm(d.last.created_at)}</div>${d.un?`<span class="bg2">${d.un}</span>`:''}</div></div>`).join('');
  const all=DEP.concat([{id:null,name:'من غير قسم'}]).map(d=>{const l=P.filter(x=>!x.is_memorial&&x.id!=ME.id&&x.department_id==d.id&&ok(x));return l.length?`<div class="card"><div class="m">${esc(d.emoji||'')} ${esc(d.name)}</div>${l.map(x=>`<div class="row" style="padding:6px 0" onclick="opn('${x.id}')">${av(x)}<div class="grow"><b>${esc(x.full_name)}</b><div class="m">${RL(x)}</div></div>💬</div>`).join('')}</div>`:''}).join('');
  return `<div class="card row" onclick="opn('${ME.id}')"><div class="av">📝</div><div class="grow"><b>الشات مع نفسي</b><div class="m">ملاحظاتك وحاجاتك الخاصة</div></div></div>`+(rc?`<h3>المحادثات</h3>${rc}`:'')+`<h3>كل الفريق</h3>`+(all||'<p class="m">مفيش نتائج.</p>')}
 const pmv=()=>`<h2>🔒 الشات الخاص</h2><input id="pq" placeholder="🔍 دوّر على اسم..." value="${esc(PMQ)}" oninput="PMQ=this.value;$('#pl').innerHTML=pml()"><div id="pl">${pml()}</div>`;
