@@ -542,7 +542,7 @@ var TYPING={},TYCH=null,TYLAST=0;
 const lastSeenTxt=d=>{const now=new Date(),same=d.toDateString()==now.toDateString(),yest=new Date(now.getTime()-86400000).toDateString()==d.toDateString(),tm=d.toLocaleTimeString(LOCALE(),{hour:'2-digit',minute:'2-digit'});if(same)return (LANG=='en'?'today ':'النهارده ')+tm;if(yest)return (LANG=='en'?'yesterday ':'إمبارح ')+tm;return d.toLocaleDateString(LOCALE(),{day:'numeric',month:'short'})+' '+tm};
 const presHTML=(p,room)=>{if(room&&TYPING[room]&&Date.now()-TYPING[room]<4000)return '<span style="color:var(--g);font-weight:700">✍️ '+(LANG=='en'?'typing…':'بيكتب...')+'</span>';if(!p||!p.last_seen)return '';const d=Date.now()-new Date(p.last_seen).getTime();if(d<150000)return '<span style="color:#34c29c;font-weight:700">● '+(LANG=='en'?'Online':'متصل الآن')+'</span>';return (LANG=='en'?'Last seen ':'آخر ظهور ')+lastSeenTxt(new Date(p.last_seen))};
 const onlineNow=p=>!!(p&&p.last_seen&&Date.now()-new Date(p.last_seen).getTime()<150000);
-const refreshPres=()=>{document.querySelectorAll('[data-pdot]').forEach(el=>{const p=P.find(x=>x.id==el.dataset.pdot);el.classList.toggle('on',onlineNow(p))});document.querySelectorAll('[data-pres]').forEach(el=>{const p=P.find(x=>x.id==el.dataset.pres);const h=presHTML(p,el.dataset.room);if(el.innerHTML!==h)el.innerHTML=h})};
+const refreshPres=()=>{document.querySelectorAll('[data-pdot]').forEach(el=>{const p=whoP(el.dataset.pdot);el.classList.toggle('on',onlineNow(p))});document.querySelectorAll('[data-pres]').forEach(el=>{const p=whoP(el.dataset.pres);const h=presHTML(p,el.dataset.room);if(el.innerHTML!==h)el.innerHTML=h})};
 const anResetAll=async()=>{if(!await uiConfirm('⚠️ تصفير كل التحليلات؟\nهيبدأ التحليل من دلوقتي للكل (الحضور والتاسكات والتفاعل والمكاسب والخصومات). النقاط الكلية مش هتتغير.'))return;run(async()=>{await q(sb.rpc('analysis_reset_all'));toast('اتصفّر التحليل ✅');await anLoad(AN.id)})};
 const fmtD=t=>{const d=new Date(t);return d.getDate()+'/'+(d.getMonth()+1)};
 const sgp=v=>(v>0?'+':v<0?'−':'')+Math.abs(v);
@@ -601,7 +601,7 @@ const anWords=(x,V_,tr,z)=>{const n_=tr.n,L=[];
 /* ===== 🟢 الحضور اللحظي ===== */
 setInterval(()=>{if(ME&&U&&navigator.onLine&&!document.hidden)sb.rpc('touch_seen').catch(()=>{})},60000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&ME&&U&&navigator.onLine)sb.rpc('touch_seen').catch(()=>{})});
-setInterval(async()=>{if(!ME||!U||!navigator.onLine||document.hidden)return;try{const r=await q(sb.from('profiles').select('id,last_seen'));(r||[]).forEach(x=>{const p=P.find(y=>y.id==x.id);if(p)p.last_seen=x.last_seen})}catch(e){}},30000);
+setInterval(async()=>{if(!ME||!U||!navigator.onLine||document.hidden)return;try{const r=await q(sb.from('profiles').select('id,last_seen'));(r||[]).forEach(x=>{const p=P.find(y=>y.id==x.id);if(p)p.last_seen=x.last_seen;if(typeof DEVP!=='undefined'&&DEVP&&DEVP.id==x.id)DEVP.last_seen=x.last_seen})}catch(e){}},30000);
 setInterval(refreshPres,1000);
 const typeChan=()=>{if(TYCH||!ME||!U)return;try{TYCH=sb.channel('cdce-typing').on('broadcast',{event:'typing'},({payload})=>{if(!payload||(ME&&payload.id==ME.id))return;TYPING[payload.room]=Date.now();refreshPres()}).subscribe()}catch(e){}};
 setInterval(typeChan,3000);
@@ -650,6 +650,7 @@ const pushRegister=async()=>{try{const t=window.__cdcePushToken;if(!t||!ME||!U||
 window.__cdcePushReady=pushRegister;
 setTimeout(pushRegister,5000);
 setInterval(pushRegister,60000);
+const whoP=id=>P.find(x=>x.id==id)||(typeof DEVP!=='undefined'&&DEVP&&DEVP.id==id?DEVP:null);
 /* ===== ⚙️ خيارات الشات الخاص (على الجهاز) ===== */
 const PREFS=()=>{try{return JSON.parse(lg('cdce_chatprefs')||'{}')}catch(e){return {}}};
 const chatPref=(room,k)=>((PREFS()[room]||{})[k]);
@@ -657,7 +658,7 @@ const setChatPref=(room,k,v)=>{const p=PREFS();p[room]=p[room]||{};p[room][k]=v;
 const WALLS=['','linear-gradient(135deg,#1e2a4a,#3b1d5e)','linear-gradient(135deg,#0f3d2e,#12303f)','linear-gradient(135deg,#3a1d1d,#4a2f0b)','linear-gradient(135deg,#1b1b2f,#162447)'];
 const applyWall=()=>{const m=document.getElementById('ms');if(!m||!V.room)return;const w=chatPref(V.room,'wall');m.style.background=WALLS[w||0]||''};
 const decorateChat=()=>{const h=document.querySelector('.ch');if(!h)return;const dm=V.t=='chat'&&isDm(V.room);let b=document.getElementById('dmbtn');if(!dm){if(b)b.remove();return}if(!b){b=document.createElement('button');b.id='dmbtn';b.className='ib';b.textContent='⋮';b.setAttribute('aria-label','خيارات المحادثة');b.onclick=dmMenu;h.appendChild(b)}};
-const dmMenu=()=>{const r=V.room,o=P.find(x=>x.id==other(r)),pin=!!chatPref(r,'pinned'),mut=!!chatPref(r,'mute');
+const dmMenu=()=>{const r=V.room,o=whoP(other(r)),pin=!!chatPref(r,'pinned'),mut=!!chatPref(r,'mute');
  sheet(`<h3>${esc(o?o.full_name:V.title)}</h3>
  <button class="it" onclick="closeSh();go({t:'prof',id:'${o?o.id:''}'})">👤 معلومات الشخص</button>
  <button class="it" onclick="closeSh();dmSearchOpen()">🔍 بحث في المحادثة</button>
@@ -901,7 +902,7 @@ const rb=()=>{const e=$('#rb');if(!e)return;const c=RPL?nc(RPL.sender):'';e.inne
 const tg=()=>{const t=$('#mi').value.trim();$('#bs').style.display=t?'':'none';$('#bm').style.display=t?'none':''};
 const cmp=()=>`<div id="rb" class="rb" style="display:none"></div><div id="cn" class="cmp"><button class="ib" onclick="stkTray()">😊</button><input id="mi" placeholder="اكتب رسالة" oninput="tg()" onkeydown="if(event.key=='Enter')sendM()" autocomplete="off"><button class="ib" onclick="attach()">📎</button><button id="bm" class="ib sd" onclick="recStart()">🎤</button><button id="bs" class="ib sd" style="display:none" onclick="sendM()">➤</button></div><div id="cr" class="cmp" style="display:none"><button class="ib" onclick="recStop(0)">🗑️</button><span class="grow" style="color:var(--r)">🔴 <b id="rt">0:00</b> بيسجّل...</span><button class="ib sd" onclick="recStop(1)">➤</button></div>`;
 const chatBody=r=>`<div class="msgs" id="ms">${msHtml()}</div>`+((r!='ann'||hc('post_announcements',n(ME)>=2))?cmp():'<div class="card m" style="margin:8px">الرسايل هنا للليدر والهيدات ومساعديهم بس.</div>');
-const chat=()=>{const o=isDm(V.room)?P.find(x=>x.id==other(V.room)):null;
+const chat=()=>{const o=isDm(V.room)?whoP(other(V.room)):null;
  return `<div class="ch">${V.back?`<button class="ib" onclick="bk('${V.back}')">›</button>`:''}${o?av(o):`<div class="av">${V.room=='general'?'💬':V.room=='ann'?'📢':'👥'}</div>`}<div class="grow" ${o?`onclick="go({t:'prof',id:'${o.id}'})"`:''}><b>${esc(V.title)}</b><div class="m">${o?RL(o)+(o.department_id?' • '+esc(dn(o.department_id)):''):V.room=='general'?'كل الفريق':V.room=='ann'?'إعلانات الفريق':'شات القسم'}</div>${o?`<div class="m" data-pres="${o.id}" data-room="${esc(V.room)}" style="font-size:12px;margin-top:2px">${presHTML(o,V.room)}</div>`:''}</div></div>`+chatBody(V.room)};
 function bk(b){if(!b)return;if(b=='me')openMe();else if(b=='pm')openPm();else{const[k,i]=b.split(':');go(k=='prof'?{t:'prof',id:i}:{t:'dept',id:i})}}
 const openRoom=(room,title,back)=>run(async()=>{if(REC2)recStop(0);if(room=='ann'||room=='vip')try{await sb.rpc('finalize_polls')}catch(e){}
@@ -975,7 +976,7 @@ const pmLoad=async()=>{const r=await q(sb.from('messages').select('id,room,sende
 const unreadInit=()=>pmLoad().then(drawNav).catch(()=>{});
 const openPm=()=>run(async()=>{try{await pmLoad()}catch(e){if(!isNetErr(e))throw e;setOffline(true)}V={t:'pm'};draw()});
 function pml(){const qq=PMQ.trim(),ok=x=>!qq||x.full_name.includes(qq);
- const rc=DML.filter(d=>{const h=chatPref(d.room,'hiddenAt');return !h||new Date(d.last.created_at)>new Date(h)}).map(d=>({d,o:P.find(x=>x.id==other(d.room))})).filter(x=>x.o&&ok(x.o)).sort((a,b)=>(!!chatPref(b.d.room,'pinned')-!!chatPref(a.d.room,'pinned'))||(b.d.last.id-a.d.last.id)).map(({d,o})=>`<div class="card row" onclick="opn('${o.id}')"><div style="position:relative;flex:none">${av(o)}<span class="pdot${onlineNow(o)?' on':''}" data-pdot="${o.id}"></span></div><div class="grow" style="min-width:0"><b>${esc(o.full_name)}</b><div class="m" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.last.sender==ME.id?'أنت: ':''}${esc(prev(d.last)).slice(0,40)}</div></div><div style="text-align:end"><div class="m">${tm(d.last.created_at)}</div>${d.un?`<span class="bg2">${d.un}</span>`:''}</div></div>`).join('');
+ const rc=DML.filter(d=>{const h=chatPref(d.room,'hiddenAt');return !h||new Date(d.last.created_at)>new Date(h)}).map(d=>({d,o:whoP(other(d.room))})).filter(x=>x.o&&ok(x.o)).sort((a,b)=>(!!chatPref(b.d.room,'pinned')-!!chatPref(a.d.room,'pinned'))||(b.d.last.id-a.d.last.id)).map(({d,o})=>`<div class="card row" onclick="opn('${o.id}')"><div style="position:relative;flex:none">${av(o)}<span class="pdot${onlineNow(o)?' on':''}" data-pdot="${o.id}"></span></div><div class="grow" style="min-width:0"><b>${esc(o.full_name)}</b><div class="m" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.last.sender==ME.id?'أنت: ':''}${esc(prev(d.last)).slice(0,40)}</div></div><div style="text-align:end"><div class="m">${tm(d.last.created_at)}</div>${d.un?`<span class="bg2">${d.un}</span>`:''}</div></div>`).join('');
  const all=DEP.concat([{id:null,name:'من غير قسم'}]).map(d=>{const l=P.filter(x=>!x.is_memorial&&x.id!=ME.id&&x.department_id==d.id&&ok(x));return l.length?`<div class="card"><div class="m">${esc(d.emoji||'')} ${esc(d.name)}</div>${l.map(x=>`<div class="row" style="padding:6px 0" onclick="opn('${x.id}')">${av(x)}<div class="grow"><b>${esc(x.full_name)}</b><div class="m">${RL(x)}</div></div>💬</div>`).join('')}</div>`:''}).join('');
  return `<div class="card row" onclick="opn('${ME.id}')"><div class="av">📝</div><div class="grow"><b>الشات مع نفسي</b><div class="m">ملاحظاتك وحاجاتك الخاصة</div></div></div>`+(rc?`<h3>المحادثات</h3>${rc}`:'')+`<h3>كل الفريق</h3>`+(all||'<p class="m">مفيش نتائج.</p>')}
 const pmv=()=>`<h2>🔒 الشات الخاص</h2><input id="pq" placeholder="🔍 دوّر على اسم..." value="${esc(PMQ)}" oninput="PMQ=this.value;$('#pl').innerHTML=pml()"><div id="pl">${pml()}</div>`;
