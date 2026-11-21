@@ -311,7 +311,7 @@ const reg=()=>run(async()=>{const name=$('#ln').value.trim(),ph=norm($('#lp').va
  const{data,error}=await sb.auth.signUp({email:mail(ph),password:pw,options:{data:{full_name:name,phone:ph,code,dept,college:$('#lc').value,year:$('#ly').value,offer:$('#lo').value}}});if(error)throw error;
  if(!data.session){const r=await sb.auth.signInWithPassword({email:mail(ph),password:pw});if(r.error)throw r.error}
  const rec=genRec();try{await q(sb.rpc('set_recovery',{c:rec}));REC=rec}catch(e){}await boot()});
-const out=async()=>{clearOff();try{await sb.rpc('release_session')}catch(e){}try{await sb.auth.signOut()}catch(e){}ME=null;U=null;mode='in';boot()};
+const out=async()=>{PUSH_LAST=null;try{if(window.__cdcePushToken)await sb.rpc('push_unregister',{p_token:window.__cdcePushToken})}catch(e){}clearOff();try{await sb.rpc('release_session')}catch(e){}try{await sb.auth.signOut()}catch(e){}ME=null;U=null;mode='in';boot()};
 const newRec=()=>run(async()=>{const c=genRec();await q(sb.rpc('set_recovery',{c}));showRec(c)});
 const delMe=async ()=>{if(!await uiConfirm('هتحذف حسابك نهائياً وتتفك ارتباط كودك. متأكد؟'))return;run(async()=>{await q(sb.rpc('delete_my_account'));try{await sb.auth.signOut()}catch(e){}clearOff();ME=null;U=null;mode='in';toast('اتحذف الحساب');login()})};
 setInterval(async()=>{if(!U)return;const{data,error}=await sb.rpc('ping_session',{sid:SID});if(!error&&data===false){clearOff();await sb.auth.signOut();U=null;ME=null;toast('اتفتح الحساب من جهاز تاني');login()}},45000);
@@ -644,6 +644,12 @@ draw=function(){_drawBase.apply(this,arguments);try{histSync()}catch(e){}};
 var BUILD='2026-11-15-n1';
 const IS_APP=!!(window.Capacitor&&typeof window.Capacitor.isNativePlatform=='function'&&window.Capacitor.isNativePlatform());
 window.__cdceBackPress=function(){try{if(closeTopOverlay())return true;if(HDEP>0&&ME){history.back();return true}return false}catch(e){return false}};
+/* ===== 🔔 تسجيل جهاز الإشعارات (بيوصل من كود الأندرويد) ===== */
+let PUSH_LAST=null;
+const pushRegister=async()=>{try{const t=window.__cdcePushToken;if(!t||!ME||!U||!navigator.onLine||t===PUSH_LAST)return;await sb.rpc('push_register',{p_token:t,p_platform:'android'});PUSH_LAST=t}catch(e){}};
+window.__cdcePushReady=pushRegister;
+setTimeout(pushRegister,5000);
+setInterval(pushRegister,60000);
 const TSTEP={
  home:{ic:'🏠',t:'الرئيسية',te:'Home',x:'دي صفحة الفريق: نبذة عننا وتاريخنا وقايدنا ولينكاتنا وكود الـ QR بتاعنا.',xe:'This is the team page: about us, our history, our leader, our links and our QR code.',sel:()=>cardByH('نبذة عنا')||'#v>*:nth-child(2)'},
  depts:{ic:'👥',t:'الأقسام',te:'Departments',x:'هنا كل أقسام ولجان الفريق. دوس على أي قسم تشوف أعضاءه، ولو أنت منه تدخل شات القسم.',xe:'All the team departments and committees. Tap one to see its members, and open its chat if you belong to it.',sel:'#v .card'},
