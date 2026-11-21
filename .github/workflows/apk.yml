@@ -19,11 +19,116 @@ jobs:
           echo '<!doctype html><html><body></body></html>' > app/www/index.html
           cd app
           npm init -y
-          npm i @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6 @capacitor/push-notifications@6
+          npm i @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6 @capacitor/push-notifications@6 @capacitor/filesystem@6 @capacitor/share@6
           echo '{"appId":"com.cdce.team","appName":"CDCE","webDir":"www","server":{"url":"https://mohamed2820.github.io/CDCE/","androidScheme":"https"}}' > capacitor.config.json
           npx cap add android
           npx cap sync android
           sed -i 's#</manifest>#<uses-permission android:name="android.permission.RECORD_AUDIO" /><uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" /><uses-permission android:name="android.permission.CAMERA" /><uses-permission android:name="android.permission.POST_NOTIFICATIONS" /></manifest>#' android/app/src/main/AndroidManifest.xml
+      - name: Add Firebase messaging dependency
+        run: |
+          sed -i "0,/dependencies {/s//dependencies {\n    implementation 'com.google.firebase:firebase-messaging:23.4.1'/" android/app/build.gradle
+          grep -q 'firebase-messaging' android/app/build.gradle
+      - name: Install native back handler
+        run: |
+          mkdir -p app/android/app/src/main/java/com/cdce/team
+          cat > app/android/app/src/main/java/com/cdce/team/MainActivity.java <<'EOF'
+          package com.cdce.team;
+
+          import android.app.NotificationChannel;
+          import android.app.NotificationManager;
+          import android.content.Context;
+          import android.os.Build;
+          import android.os.Bundle;
+          import com.google.android.gms.tasks.OnCompleteListener;
+          import com.google.android.gms.tasks.Task;
+          import com.google.firebase.messaging.FirebaseMessaging;
+          import android.webkit.ValueCallback;
+          import android.webkit.WebView;
+          import androidx.activity.OnBackPressedCallback;
+          import com.getcapacitor.BridgeActivity;
+
+          public class MainActivity extends BridgeActivity {
+
+              private static final String BACK_JS =
+                  "(function(){try{return (window.__cdceBackPress && window.__cdceBackPress()) ? 'yes' : 'no';}catch(e){return 'no';}})()";
+
+              @Override
+              public void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  // Register AFTER Capacitor's own callback, so ours runs first (last-added wins).
+                  // This works on Android 13+ (predictive back) where onBackPressed() is not called.
+                  createNotificationChannel();
+                  if (Build.VERSION.SDK_INT >= 33) {
+                      requestPermissions(new String[] { "android.permission.POST_NOTIFICATIONS" }, 101);
+                  }
+                  getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+                      @Override
+                      public void handleOnBackPressed() {
+                          if (getBridge() == null || getBridge().getWebView() == null) {
+                              moveTaskToBack(true);
+                              return;
+                          }
+                          WebView wv = getBridge().getWebView();
+                          wv.evaluateJavascript(BACK_JS, new ValueCallback<String>() {
+                              @Override
+                              public void onReceiveValue(String value) {
+                                  // value is JSON-encoded, e.g. "\"yes\""
+                                  if (value != null && value.contains("yes")) {
+                                      return; // the page went one step back: stay in the app
+                                  }
+                                  moveTaskToBack(true); // no step left: send app to background
+                              }
+                          });
+                      }
+                  });
+              }
+
+              @Override
+              public void onResume() {
+                  super.onResume();
+                  // Tell the page the native handler is wired (shown in settings)
+                  if (getBridge() != null && getBridge().getWebView() != null) {
+                      getBridge().getWebView().postDelayed(new Runnable() {
+                          @Override
+                          public void run() {
+                              if (getBridge() != null && getBridge().getWebView() != null) {
+                                  getBridge().getWebView().evaluateJavascript("window.__cdceNative=true", null);
+                              }
+                              sendPushToken();
+                          }
+                      }, 2500);
+                  }
+              }
+
+              private void createNotificationChannel() {
+                  if (Build.VERSION.SDK_INT >= 26) {
+                      NotificationChannel channel = new NotificationChannel("cdce_default", "CDCE notifications", NotificationManager.IMPORTANCE_HIGH);
+                      NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+                      if (nm != null) {
+                          nm.createNotificationChannel(channel);
+                      }
+                  }
+              }
+
+              private void sendPushToken() {
+                  FirebaseMessaging.getInstance().getToken().addOnCompleteListener(new OnCompleteListener<String>() {
+                      @Override
+                      public void onComplete(Task<String> task) {
+                          if (!task.isSuccessful() || task.getResult() == null) {
+                              return;
+                          }
+                          final String token = task.getResult();
+                          if (getBridge() == null || getBridge().getWebView() == null) {
+                              return;
+                          }
+                          // token is FCM-safe (letters, digits, ':', '-', '_'); the page registers it for this user
+                          getBridge().getWebView().evaluateJavascript(
+                              "window.__cdcePushToken='" + token + "';if(window.__cdcePushReady)window.__cdcePushReady();", null);
+                      }
+                  });
+              }
+          }
+          EOF
       - name: Add Firebase config
         env:
           GOOGLE_SERVICES: ${{ secrets.GOOGLE_SERVICES_JSON }}
