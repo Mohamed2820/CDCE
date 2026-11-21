@@ -1,0 +1,213 @@
+name: Build APK
+on:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Create Capacitor project
+        run: |
+          mkdir -p app/www
+          echo '<!doctype html><html><body></body></html>' > app/www/index.html
+          cd app
+          npm init -y
+          npm i @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6 @capacitor/push-notifications@6 @capacitor/filesystem@6 @capacitor/share@6
+          echo '{"appId":"com.cdce.team","appName":"CDCE","webDir":"www","server":{"url":"https://mohamed2820.github.io/CDCE/","androidScheme":"https"}}' > capacitor.config.json
+          npx cap add android
+          npx cap sync android
+          sed -i 's#</manifest>#<uses-permission android:name="android.permission.RECORD_AUDIO" /><uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" /><uses-permission android:name="android.permission.CAMERA" /><uses-permission android:name="android.permission.POST_NOTIFICATIONS" /></manifest>#' android/app/src/main/AndroidManifest.xml
+      - name: Replace app icon with CDCE logo
+        run: |
+          command -v convert >/dev/null 2>&1 || { sudo apt-get update -y >/dev/null && sudo apt-get install -y imagemagick >/dev/null; }
+          SRC="$GITHUB_WORKSPACE/icon-512.png"
+          RES=app/android/app/src/main/res
+          if [ ! -f "$SRC" ]; then echo "icon-512.png not found in repo root"; exit 1; fi
+          if [ ! -d "$RES" ]; then echo "Android res folder not found"; exit 1; fi
+          for entry in mdpi:48:108 hdpi:72:162 xhdpi:96:216 xxhdpi:144:324 xxxhdpi:192:432; do
+            d=${entry%%:*}; rest=${entry#*:}; legacy=${rest%%:*}; fg=${rest#*:}
+            inner=$(( fg * 62 / 100 ))
+            mkdir -p "$RES/mipmap-$d"
+            convert "$SRC" -resize ${legacy}x${legacy} -strip "$RES/mipmap-$d/ic_launcher.png"
+            cp "$RES/mipmap-$d/ic_launcher.png" "$RES/mipmap-$d/ic_launcher_round.png"
+            convert "$SRC" -resize ${inner}x${inner} -background black -gravity center -extent ${fg}x${fg} -strip "$RES/mipmap-$d/ic_launcher_foreground.png"
+          done
+          mkdir -p "$RES/mipmap-anydpi-v26" "$RES/values"
+          cat > "$RES/values/cdce_icon.xml" <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <color name="cdce_icon_bg">#000000</color>
+          </resources>
+          EOF
+          cat > "$RES/mipmap-anydpi-v26/ic_launcher.xml" <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+              <background android:drawable="@color/cdce_icon_bg"/>
+              <foreground android:drawable="@mipmap/ic_launcher_foreground"/>
+          </adaptive-icon>
+          EOF
+          cp "$RES/mipmap-anydpi-v26/ic_launcher.xml" "$RES/mipmap-anydpi-v26/ic_launcher_round.xml"
+      - name: Add Firebase messaging dependency
+        run: |
+          sed -i "0,/dependencies {/s//dependencies {\n    implementation 'com.google.firebase:firebase-messaging:23.4.1'/" app/android/app/build.gradle
+          grep -q 'firebase-messaging' app/android/app/build.gradle
+      - name: Install native back handler
+        run: |
+          mkdir -p app/android/app/src/main/java/com/cdce/team
+          cat > app/android/app/src/main/java/com/cdce/team/MainActivity.java <<'EOF'
+          package com.cdce.team;
+
+          import android.app.NotificationChannel;
+          import android.app.NotificationManager;
+          import android.content.Context;
+          import android.os.Build;
+          import android.os.Bundle;
+          import com.google.android.gms.tasks.OnCompleteListener;
+          import com.google.android.gms.tasks.Task;
+          import com.google.firebase.messaging.FirebaseMessaging;
+          import android.webkit.ValueCallback;
+          import android.webkit.WebView;
+          import androidx.activity.OnBackPressedCallback;
+          import com.getcapacitor.BridgeActivity;
+
+          public class MainActivity extends BridgeActivity {
+
+              private static final String BACK_JS =
+                  "(function(){try{return (window.__cdceBackPress && window.__cdceBackPress()) ? 'yes' : 'no';}catch(e){return 'no';}})()";
+
+              @Override
+              public void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  // Register AFTER Capacitor's own callback, so ours runs first (last-added wins).
+                  // This works on Android 13+ (predictive back) where onBackPressed() is not called.
+                  createNotificationChannel();
+                  if (Build.VERSION.SDK_INT >= 33) {
+                      requestPermissions(new String[] { "android.permission.POST_NOTIFICATIONS" }, 101);
+                  }
+                  getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+                      @Override
+                      public void handleOnBackPressed() {
+                          if (getBridge() == null || getBridge().getWebView() == null) {
+                              moveTaskToBack(true);
+                              return;
+                          }
+                          WebView wv = getBridge().getWebView();
+                          wv.evaluateJavascript(BACK_JS, new ValueCallback<String>() {
+                              @Override
+                              public void onReceiveValue(String value) {
+                                  // value is JSON-encoded, e.g. "\"yes\""
+                                  if (value != null && value.contains("yes")) {
+                                      return; // the page went one step back: stay in the app
+                                  }
+                                  moveTaskToBack(true); // no step left: send app to background
+                              }
+                          });
+                      }
+                  });
+              }
+
+              @Override
+              public void onResume() {
+                  super.onResume();
+                  // Tell the page the native handler is wired (shown in settings)
+                  if (getBridge() != null && getBridge().getWebView() != null) {
+                      getBridge().getWebView().postDelayed(new Runnable() {
+                          @Override
+                          public void run() {
+                              if (getBridge() != null && getBridge().getWebView() != null) {
+                                  getBridge().getWebView().evaluateJavascript("window.__cdceNative=true", null);
+                              }
+                              sendPushToken();
+                          }
+                      }, 2500);
+                  }
+              }
+
+              private void createNotificationChannel() {
+                  if (Build.VERSION.SDK_INT >= 26) {
+                      NotificationChannel channel = new NotificationChannel("cdce_default", "CDCE notifications", NotificationManager.IMPORTANCE_HIGH);
+                      NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+                      if (nm != null) {
+                          nm.createNotificationChannel(channel);
+                      }
+                  }
+              }
+
+              private void sendPushToken() {
+                  FirebaseMessaging.getInstance().getToken().addOnCompleteListener(new OnCompleteListener<String>() {
+                      @Override
+                      public void onComplete(Task<String> task) {
+                          if (!task.isSuccessful() || task.getResult() == null) {
+                              return;
+                          }
+                          final String token = task.getResult();
+                          if (getBridge() == null || getBridge().getWebView() == null) {
+                              return;
+                          }
+                          // token is FCM-safe (letters, digits, ':', '-', '_'); the page registers it for this user
+                          getBridge().getWebView().evaluateJavascript(
+                              "window.__cdcePushToken='" + token + "';if(window.__cdcePushReady)window.__cdcePushReady();", null);
+                      }
+                  });
+              }
+          }
+          EOF
+      - name: Add Firebase config
+        env:
+          GOOGLE_SERVICES: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -z "$GOOGLE_SERVICES" ]; then echo "Missing secret GOOGLE_SERVICES_JSON"; exit 1; fi
+          cd app
+          printf '%s' "$GOOGLE_SERVICES" > android/app/google-services.json
+          sed -i '0,/dependencies {/s//dependencies {\n        classpath "com.google.gms:google-services:4.4.2"/' android/build.gradle
+          echo "apply plugin: 'com.google.gms.google-services'" >> android/app/build.gradle
+      - name: Build debug APK
+        working-directory: app/android
+        run: ./gradlew assembleDebug
+      - name: Build signed release APK (optional)
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "No KEYSTORE_BASE64 secret: skipping signed release build"
+            exit 0
+          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > app/android/app/cdce-release.jks
+          cat >> app/android/app/build.gradle <<'EOF'
+          android {
+              signingConfigs {
+                  release {
+                      storeFile file('cdce-release.jks')
+                      storePassword System.getenv('KEYSTORE_PASSWORD')
+                      keyAlias System.getenv('KEY_ALIAS')
+                      keyPassword System.getenv('KEY_PASSWORD')
+                  }
+              }
+              buildTypes {
+                  release {
+                      signingConfig signingConfigs.release
+                  }
+              }
+          }
+          EOF
+          cd app/android && chmod +x ./gradlew && ./gradlew assembleRelease
+      - name: Upload signed release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: CDCE-release-apk
+          path: app/android/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: ignore
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CDCE-apk
+          path: app/android/app/build/outputs/apk/debug/app-debug.apk
