@@ -26,8 +26,8 @@ jobs:
           sed -i 's#</manifest>#<uses-permission android:name="android.permission.RECORD_AUDIO" /><uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" /><uses-permission android:name="android.permission.CAMERA" /><uses-permission android:name="android.permission.POST_NOTIFICATIONS" /></manifest>#' android/app/src/main/AndroidManifest.xml
       - name: Add Firebase messaging dependency
         run: |
-          sed -i "0,/dependencies {/s//dependencies {\n    implementation 'com.google.firebase:firebase-messaging:23.4.1'/" android/app/build.gradle
-          grep -q 'firebase-messaging' android/app/build.gradle
+          sed -i "0,/dependencies {/s//dependencies {\n    implementation 'com.google.firebase:firebase-messaging:23.4.1'/" app/android/app/build.gradle
+          grep -q 'firebase-messaging' app/android/app/build.gradle
       - name: Install native back handler
         run: |
           mkdir -p app/android/app/src/main/java/com/cdce/team
